@@ -1,7 +1,6 @@
 package injection
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -21,8 +20,16 @@ func TestDI(t *testing.T) {
 
 	ctx.Inject(obj)
 
-	fmt.Println("asdasdas")
-	fmt.Println(obj.Dependency("numero"))
-	fmt.Println(obj.Dependency("string"))
-	fmt.Println(obj.Value)
+	if obj.Dependency("numero").(int) != 12 {
+		t.Error("Invalid number")
+	}
+
+	if obj.Dependency("string").(string) != "bla ble bli" {
+		t.Error("Invalid string")
+	}
+
+	if obj.Value != 15 {
+		t.Error("Invalid object value")
+	}
+
 }

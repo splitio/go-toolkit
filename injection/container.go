@@ -1,6 +1,9 @@
 package injection
 
-import "reflect"
+import (
+	"reflect"
+	"sync"
+)
 
 // NewContext return an instance of Context
 func NewContext() *Context {
@@ -10,15 +13,22 @@ func NewContext() *Context {
 // Context of dependencies to be injected as context
 type Context struct {
 	container map[string]interface{}
+	mx        sync.Mutex
 }
 
 // AddDependency adds a dependency to the container
 func (c *Context) AddDependency(key string, d interface{}) {
+	c.mx.Lock()
 	c.container[key] = d
+	c.mx.Unlock()
+
 }
 
 // Dependency returns an object given a key
 func (c *Context) Dependency(key string) interface{} {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+
 	return c.container[key]
 }
 
