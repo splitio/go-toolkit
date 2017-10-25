@@ -2,7 +2,7 @@ package asynctask
 
 import (
 	"fmt"
-	"github.com/splitio/go-client/splitio/util/logging"
+	"github.com/splitio/go-toolkit/logging"
 	"sync/atomic"
 	"time"
 )
