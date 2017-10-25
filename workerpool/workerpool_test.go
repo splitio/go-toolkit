@@ -2,7 +2,7 @@ package workerpool
 
 import (
 	"fmt"
-	"github.com/splitio/go-client/splitio/util/logging"
+	"github.com/splitio/go-toolkit/logging"
 	"sync"
 	"testing"
 	"time"
