@@ -4,6 +4,7 @@ package logging
 
 import (
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 )
@@ -62,7 +63,7 @@ func NewLogger(options *LoggerOptions) *Logger {
 	}
 
 	if options.CommonWriter == nil {
-		commonWriter = os.Stdout
+		commonWriter = ioutil.Discard
 	}
 
 	return &Logger{

@@ -14,7 +14,8 @@ type AsyncTask struct {
 	name       string
 	running    bool
 	stopSignal atomic.Value
-	period     int64
+	period     int
+	onInit     func(l logging.LoggerInterface) error
 	onStop     func(l logging.LoggerInterface)
 	logger     logging.LoggerInterface
 }
@@ -45,16 +46,28 @@ func (t *AsyncTask) Start() {
 				time.Sleep(time.Duration(t.period) * time.Second)
 			}
 		}()
+
+		// If there's an initialization function, execute it
+		if t.onInit != nil {
+			err := t.onInit(t.logger)
+			if err != nil {
+				// If something goes wrong during initialization, abort.
+				t.logger.Error(err.Error())
+				return
+			}
+		}
+
 		// Load and type assert the contents of the atomic variable `stopSignal`.
 		// Keep the task running as long as the stopSignal is not true or until
 		// something other than a boolean is stored in the atomic variable.
 		stop, ok := t.stopSignal.Load().(bool)
-		for ; ok && !stop; stop, ok = t.stopSignal.Load().(bool) {
+		for ok && !stop {
+			stop, ok = t.stopSignal.Load().(bool)
 			err := t.task(t.logger)
 			if err != nil && t.logger != nil {
 				t.logger.Error(err.Error())
 			}
-			time.Sleep(time.Duration(t.period) * time.Millisecond)
+			time.Sleep(time.Duration(t.period) * time.Second)
 		}
 		t.running = false
 		if t.onStop != nil {
@@ -77,7 +90,8 @@ func (t *AsyncTask) IsRunning() bool {
 func NewAsyncTask(
 	name string,
 	task func(l logging.LoggerInterface) error,
-	period int64,
+	period int,
+	onInit func(l logging.LoggerInterface) error,
 	onStop func(l logging.LoggerInterface),
 	logger logging.LoggerInterface,
 ) *AsyncTask {
@@ -86,6 +100,7 @@ func NewAsyncTask(
 		task:    task,
 		running: false,
 		period:  period,
+		onInit:  onInit,
 		onStop:  onStop,
 		logger:  logger,
 	}
