@@ -282,7 +282,7 @@ func (s *ThreadSafeSet) IsEqual(t Set) bool {
 	return equal
 }
 
-// IsSubset returns true if this set is a subset of the passed one
+// IsSubset returns true if the passed set is a subset of this one
 func (s *ThreadSafeSet) IsSubset(t Set) (subset bool) {
 	s.l.RLock()
 	defer s.l.RUnlock()
