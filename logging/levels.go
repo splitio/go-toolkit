@@ -1,8 +1,16 @@
 package logging
 
+import (
+	"math"
+)
+
+// Standard values
 const (
+	// Discard 0 value, so when can use it as "the lack of a logging level"
+	_ = iota
+
 	// LevelError log level
-	LevelError = iota
+	LevelError
 
 	// LevelWarning log level
 	LevelWarning
@@ -17,6 +25,15 @@ const (
 	LevelVerbose
 )
 
+// Special values
+const (
+	// LevelNone implies that NOTHING will be logged, not even errors
+	LevelNone = math.MinInt32
+
+	// LevelAll implies that All logging levels will be recorded
+	LevelAll = math.MaxInt32
+)
+
 // LevelFilteredLoggerWrapper forwards log message to delegate if level is set higher than incoming message
 type LevelFilteredLoggerWrapper struct {
 	level    int
@@ -25,7 +42,9 @@ type LevelFilteredLoggerWrapper struct {
 
 // Error forwards error logging messages
 func (l *LevelFilteredLoggerWrapper) Error(is ...interface{}) {
-	l.delegate.Error(is...)
+	if l.level >= LevelError {
+		l.delegate.Error(is...)
+	}
 }
 
 // Warning forwards warning logging messages

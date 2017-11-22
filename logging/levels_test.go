@@ -191,3 +191,67 @@ func TestVerboseLevel(t *testing.T) {
 		}
 	}
 }
+
+func TestAllLevel(t *testing.T) {
+
+	delegate := &mockedLogger{}
+	delegate.reset()
+
+	logger := LevelFilteredLoggerWrapper{
+		delegate: delegate,
+		level:    LevelAll,
+	}
+
+	logger.Error("text")
+	logger.Warning("text")
+	logger.Info("text")
+	logger.Debug("text")
+	logger.Verbose("text")
+
+	shouldBeCalled := []string{"Error", "Warning", "Info", "Debug", "Verbose"}
+	shouldNotBeCalled := []string{}
+
+	for _, level := range shouldBeCalled {
+		if !delegate.msgs[level] {
+			t.Errorf("Call to log level function \"%s\" should have been forwarded", level)
+		}
+	}
+
+	for _, level := range shouldNotBeCalled {
+		if delegate.msgs[level] {
+			t.Errorf("Call to log level function \"%s\" should NOT have been forwarded", level)
+		}
+	}
+}
+
+func TestNoneLevel(t *testing.T) {
+
+	delegate := &mockedLogger{}
+	delegate.reset()
+
+	logger := LevelFilteredLoggerWrapper{
+		delegate: delegate,
+		level:    LevelNone,
+	}
+
+	logger.Error("text")
+	logger.Warning("text")
+	logger.Info("text")
+	logger.Debug("text")
+	logger.Verbose("text")
+
+	shouldNotBeCalled := []string{"Error", "Warning", "Info", "Debug", "Verbose"}
+	shouldBeCalled := []string{}
+
+	for _, level := range shouldBeCalled {
+		if !delegate.msgs[level] {
+			t.Errorf("Call to log level function \"%s\" should have been forwarded", level)
+		}
+	}
+
+	for _, level := range shouldNotBeCalled {
+		if delegate.msgs[level] {
+			t.Errorf("Call to log level function \"%s\" should NOT have been forwarded", level)
+		}
+	}
+}
