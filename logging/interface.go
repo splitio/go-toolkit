@@ -8,4 +8,5 @@ type LoggerInterface interface {
 	Warning(msg ...interface{})
 	Info(msg ...interface{})
 	Debug(msg ...interface{})
+	Verbose(msg ...interface{})
 }
