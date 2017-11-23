@@ -4,7 +4,6 @@ package logging
 
 import (
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 )
@@ -13,7 +12,7 @@ import (
 // Struct that must be passed to the NewLogger constructor to setup a logger
 // CommonWriter and ErrorWriter can be <nil>. In that case they'll default to os.Stdout
 type LoggerOptions struct {
-	logLevel      int
+	LogLevel      int
 	ErrorWriter   io.Writer
 	WarningWriter io.Writer
 	InfoWriter    io.Writer
@@ -66,7 +65,7 @@ func normalizeOptions(options *LoggerOptions) *LoggerOptions {
 	}
 
 	if toRet.DebugWriter == nil {
-		toRet.DebugWriter = ioutil.Discard
+		toRet.DebugWriter = os.Stdout
 	}
 
 	if toRet.ErrorWriter == nil {
@@ -74,21 +73,21 @@ func normalizeOptions(options *LoggerOptions) *LoggerOptions {
 	}
 
 	if toRet.InfoWriter == nil {
-		toRet.InfoWriter = ioutil.Discard
+		toRet.InfoWriter = os.Stdout
 	}
 
 	if toRet.VerboseWriter == nil {
-		toRet.VerboseWriter = ioutil.Discard
+		toRet.VerboseWriter = os.Stdout
 	}
 
 	if toRet.WarningWriter == nil {
-		toRet.WarningWriter = ioutil.Discard
+		toRet.WarningWriter = os.Stdout
 	}
 
-	switch toRet.logLevel {
+	switch toRet.LogLevel {
 	case LevelAll, LevelDebug, LevelError, LevelInfo, LevelNone, LevelVerbose, LevelWarning:
 	default:
-		toRet.logLevel = LevelError
+		toRet.LogLevel = LevelError
 	}
 	return toRet
 }
@@ -108,6 +107,6 @@ func NewLogger(options *LoggerOptions) LoggerInterface {
 
 	return &LevelFilteredLoggerWrapper{
 		delegate: logger,
-		level:    options.logLevel,
+		level:    options.LogLevel,
 	}
 }
