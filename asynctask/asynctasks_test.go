@@ -139,5 +139,4 @@ func TestAsyncTaskErrors(t *testing.T) {
 	if res != 0 {
 		t.Error("Task should have never executed if there was an error when calling onInit()")
 	}
-
 }
