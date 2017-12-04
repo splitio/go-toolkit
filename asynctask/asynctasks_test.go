@@ -140,3 +140,30 @@ func TestAsyncTaskErrors(t *testing.T) {
 		t.Error("Task should have never executed if there was an error when calling onInit()")
 	}
 }
+
+func TestAsyncTaskWakeUp(t *testing.T) {
+	res := 0
+	task1 := NewAsyncTask(
+		"testTask1",
+		func(l logging.LoggerInterface) error { res++; return nil },
+		20,
+		func(l logging.LoggerInterface) error { return nil },
+		func(l logging.LoggerInterface) {},
+		logging.NewLogger(nil),
+	)
+
+	task1.Start()
+	time.Sleep(time.Second * 1)
+	_ = task1.WakeUp()
+	time.Sleep(time.Second * 1)
+	_ = task1.WakeUp()
+	time.Sleep(time.Second * 1)
+	_ = task1.WakeUp()
+	_ = task1.Stop()
+
+	time.Sleep(time.Second * 2)
+
+	if res != 4 {
+		t.Errorf("Task shuld have executed 4 times. It ran %d times", res)
+	}
+}

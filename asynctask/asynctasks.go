@@ -9,24 +9,20 @@ import (
 // AsyncTask is a struct that wraps tasks that should run periodically and can be remotely stopped & started,
 // as well as making it's status (running/stopped) available.
 type AsyncTask struct {
-	task        func(l logging.LoggerInterface) error
-	name        string
-	running     bool
-	stopChannel chan bool
-	period      int
-	onInit      func(l logging.LoggerInterface) error
-	onStop      func(l logging.LoggerInterface)
-	logger      logging.LoggerInterface
+	task     func(l logging.LoggerInterface) error
+	name     string
+	running  bool
+	incoming chan int
+	period   int
+	onInit   func(l logging.LoggerInterface) error
+	onStop   func(l logging.LoggerInterface)
+	logger   logging.LoggerInterface
 }
 
-func (t *AsyncTask) waitForInterrupt() bool {
-	select {
-	case <-t.stopChannel:
-		return true
-	case <-time.After(time.Second * time.Duration(t.period)):
-		return false
-	}
-}
+const (
+	taskMessageStop = iota
+	taskMessageWakeup
+)
 
 // Start initiates the task. It wraps the execution in a closure guarded by a call to recover() in order
 // to prevent the main application from crashin if something goes wrong while the sdk interacts with the backend.
@@ -67,34 +63,50 @@ func (t *AsyncTask) Start() {
 			}
 		}
 
+		// Task execution
 		for t.running {
+			// Run the wrapped task and handle the returned error if any.
 			err := t.task(t.logger)
 			if err != nil && t.logger != nil {
 				t.logger.Error(err.Error())
 			}
-			// waitForInterrupt will return true if the task was interrupted and should be aborted
-			// false if the period has expired and the task is ready to run again
-			t.running = !t.waitForInterrupt()
+
+			// Wait for either a timeout or an interruption (can be a stop signal or a wake up)
+			select {
+			case msg := <-t.incoming:
+				switch msg {
+				case taskMessageStop:
+					t.running = false
+				case taskMessageWakeup:
+				}
+			case <-time.After(time.Second * time.Duration(t.period)):
+			}
 		}
+
+		// Post-execution cleanup
 		if t.onStop != nil {
 			t.onStop(t.logger)
 		}
 	}()
 }
 
-// Stop prevents future executions of the task
-func (t *AsyncTask) Stop() {
+func (t *AsyncTask) sendSignal(signal int) error {
 	select {
-	case t.stopChannel <- true:
-		return
+	case t.incoming <- signal:
+		return nil
 	default:
-		if t.logger != nil {
-			t.logger.Error(fmt.Sprintf(
-				"Cannot stop task %s. A stop signal has already been sent and is yet to be processed",
-				t.name,
-			))
-		}
+		return fmt.Errorf("Couldn't send message to task %s", t.name)
 	}
+}
+
+// Stop prevents future executions of the task
+func (t *AsyncTask) Stop() error {
+	return t.sendSignal(taskMessageStop)
+}
+
+// WakeUp interrupts the task's sleep period and resumes execution
+func (t *AsyncTask) WakeUp() error {
+	return t.sendSignal(taskMessageWakeup)
 }
 
 // IsRunning returns true if the task is currently running
@@ -112,15 +124,14 @@ func NewAsyncTask(
 	logger logging.LoggerInterface,
 ) *AsyncTask {
 	t := AsyncTask{
-		name:        name,
-		task:        task,
-		running:     false,
-		period:      period,
-		onInit:      onInit,
-		onStop:      onStop,
-		logger:      logger,
-		stopChannel: make(chan bool, 1),
+		name:     name,
+		task:     task,
+		running:  false,
+		period:   period,
+		onInit:   onInit,
+		onStop:   onStop,
+		logger:   logger,
+		incoming: make(chan int, 10),
 	}
-
 	return &t
 }
