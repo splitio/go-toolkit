@@ -46,6 +46,7 @@ func (t *AsyncTask) Start() {
 						t.name,
 						t.period,
 					))
+					t.logger.Error(r)
 				}
 				time.Sleep(time.Duration(t.period) * time.Second)
 			}

@@ -59,7 +59,11 @@ func TestWorkerAdminConstructionAndNormalOperation(t *testing.T) {
 	}
 	resMutex.RUnlock()
 	time.Sleep(time.Second * 1)
-	wa.StopAll()
+	errs := wa.StopAll()
+	if errs != nil {
+		t.Error("Not all workers stopped properly")
+		t.Error(errs)
+	}
 }
 
 type failingWorker struct {

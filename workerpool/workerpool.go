@@ -95,7 +95,7 @@ func (a *WorkerAdmin) QueueMessage(m interface{}) bool {
 func (a *WorkerAdmin) StopWorker(name string) error {
 	a.signalsMutex.RLock()
 	c, ok := a.signals[name]
-	defer a.signalsMutex.RUnlock()
+	a.signalsMutex.RUnlock()
 	if !ok {
 		return fmt.Errorf("Worker %s doesn't exist, hence it cannot be stopped", name)
 	}
@@ -127,6 +127,14 @@ func (a *WorkerAdmin) StopAll() error {
 // QueueSize returns the current queue size
 func (a *WorkerAdmin) QueueSize() int {
 	return len(a.queue)
+}
+
+// IsWorkerRunning returns true if the worker exists and is currently running
+func (a *WorkerAdmin) IsWorkerRunning(name string) bool {
+	a.signalsMutex.RLock()
+	_, ok := a.signals[name]
+	a.signalsMutex.RUnlock()
+	return ok // We consider a worker to be running if it exists in the list of valid signal channels
 }
 
 // NewWorkerAdmin instantiates a new WorkerAdmin and returns a pointer to it.
