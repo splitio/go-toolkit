@@ -64,6 +64,15 @@ func TestWorkerAdminConstructionAndNormalOperation(t *testing.T) {
 		t.Error("Not all workers stopped properly")
 		t.Error(errs)
 	}
+	time.Sleep(1)
+
+	for _, i := range []int{1, 2, 3} {
+		wName := fmt.Sprintf("worker_%d", i)
+		if wa.IsWorkerRunning(wName) {
+			t.Errorf("Worker %s should be stopped", wName)
+		}
+	}
+
 }
 
 type failingWorker struct {
