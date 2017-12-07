@@ -64,7 +64,7 @@ func TestWorkerAdminConstructionAndNormalOperation(t *testing.T) {
 		t.Error("Not all workers stopped properly")
 		t.Error(errs)
 	}
-	time.Sleep(1)
+	time.Sleep(time.Second * 1)
 
 	for _, i := range []int{1, 2, 3} {
 		wName := fmt.Sprintf("worker_%d", i)
