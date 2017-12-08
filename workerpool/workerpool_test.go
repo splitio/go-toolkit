@@ -35,7 +35,8 @@ func (w *okWorker) FailureTime() int64 { return 0 }
 func TestWorkerAdminConstructionAndNormalOperation(t *testing.T) {
 	// To test this, we'll use a map of strings to int.
 	// Each worker will store the number popped from the queue in the map with the key being the worker name.
-	// This will allow us to track which worker has processed each message and determine if a stopped worker keeps processing messages.
+	// This will allow us to track which worker has processed each message and determine if a stopped worker keeps
+	// processing messages.
 	// TODO
 	logger := logging.NewLogger(&logging.LoggerOptions{})
 	wa := NewWorkerAdmin(100, logger)
@@ -58,7 +59,20 @@ func TestWorkerAdminConstructionAndNormalOperation(t *testing.T) {
 	}
 	resMutex.RUnlock()
 	time.Sleep(time.Second * 1)
-	wa.StopAll()
+	errs := wa.StopAll()
+	if errs != nil {
+		t.Error("Not all workers stopped properly")
+		t.Error(errs)
+	}
+	time.Sleep(time.Second * 1)
+
+	for _, i := range []int{1, 2, 3} {
+		wName := fmt.Sprintf("worker_%d", i)
+		if wa.IsWorkerRunning(wName) {
+			t.Errorf("Worker %s should be stopped", wName)
+		}
+	}
+
 }
 
 type failingWorker struct {
