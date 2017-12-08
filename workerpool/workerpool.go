@@ -7,12 +7,16 @@ import (
 	"time"
 )
 
+const (
+	workerSignalStop = iota
+)
+
 // WorkerAdmin struct handles multiple worker execution, popping jobs from a single queue
 type WorkerAdmin struct {
-	enabled      map[string]bool
 	queue        chan interface{}
+	signalsMutex sync.RWMutex
+	signals      map[string]chan int
 	logger       logging.LoggerInterface
-	enabledMutex sync.RWMutex
 }
 
 // Worker interface should be implemented by concrete workers that will perform the actual job
@@ -30,10 +34,9 @@ type Worker interface {
 }
 
 func (a *WorkerAdmin) workerWrapper(w Worker) {
-	a.enabledMutex.Lock()
-	a.enabled[w.Name()] = true
-	a.enabledMutex.Unlock()
-
+	a.signalsMutex.Lock()
+	a.signals[w.Name()] = make(chan int, 10)
+	a.signalsMutex.Unlock()
 	defer func() {
 		if r := recover(); r != nil {
 			a.logger.Error(fmt.Sprintf(
@@ -41,28 +44,25 @@ func (a *WorkerAdmin) workerWrapper(w Worker) {
 				w.Name(),
 				r,
 			))
-			a.enabledMutex.Lock()
-			a.enabled[w.Name()] = false
-			a.enabledMutex.Unlock()
+		}
+		if a.signals != nil { // This should ALWAYS be the case, but just in case... we don't want to panic here.
+			a.signalsMutex.Lock()
+			delete(a.signals, w.Name())
+			a.signalsMutex.Unlock()
 		}
 	}()
 	defer w.Cleanup()
-	for a.shouldBeWorking(w.Name()) {
+	for {
 		select {
-		case msg := <-a.queue:
-			if !a.shouldBeWorking(w.Name()) {
-				// If by the time the worker wakes up it's execution has been cancelled,
-				// Put the message back in the queue and return
-				a.queue <- msg
+		case msg := <-a.signals[w.Name()]:
+			switch msg {
+			case workerSignalStop:
 				return
 			}
+		case msg := <-a.queue:
 			if err := w.DoWork(msg); err != nil {
 				w.OnError(err)
 				time.Sleep(time.Duration(w.FailureTime()) * time.Millisecond)
-			}
-		case <-time.After(time.Millisecond * 500):
-			if !a.shouldBeWorking(w.Name()) {
-				return
 			}
 		}
 	}
@@ -91,27 +91,37 @@ func (a *WorkerAdmin) QueueMessage(m interface{}) bool {
 	}
 }
 
-func (a *WorkerAdmin) shouldBeWorking(name string) bool {
-	a.enabledMutex.RLock()
-	status, found := a.enabled[name]
-	a.enabledMutex.RUnlock()
-	return found && status
-}
-
 // StopWorker ends the worker's event loop, preventing it from picking further jobs
-func (a *WorkerAdmin) StopWorker(name string) {
-	a.enabledMutex.Lock()
-	a.enabled[name] = false
-	a.enabledMutex.Unlock()
+func (a *WorkerAdmin) StopWorker(name string) error {
+	a.signalsMutex.RLock()
+	c, ok := a.signals[name]
+	a.signalsMutex.RUnlock()
+	if !ok {
+		return fmt.Errorf("Worker %s doesn't exist, hence it cannot be stopped", name)
+	}
+	select {
+	case c <- workerSignalStop:
+	default:
+		return fmt.Errorf("Couldn't send stop signal to worker %s", name)
+	}
+	return nil
 }
 
 // StopAll ends all worker's event loops
-func (a *WorkerAdmin) StopAll() {
-	a.enabledMutex.Lock()
-	for workerName := range a.enabled {
-		a.enabled[workerName] = false
+func (a *WorkerAdmin) StopAll() error {
+	failed := make([]string, 0)
+	for workerName := range a.signals {
+		err := a.StopWorker(workerName)
+		if err != nil {
+			a.logger.Error(err)
+			failed = append(failed, workerName)
+		}
 	}
-	a.enabledMutex.Unlock()
+	if len(failed) > 0 {
+		return fmt.Errorf("Workers %v failed to shutdown", failed)
+	}
+
+	return nil
 }
 
 // QueueSize returns the current queue size
@@ -119,10 +129,18 @@ func (a *WorkerAdmin) QueueSize() int {
 	return len(a.queue)
 }
 
+// IsWorkerRunning returns true if the worker exists and is currently running
+func (a *WorkerAdmin) IsWorkerRunning(name string) bool {
+	a.signalsMutex.RLock()
+	_, ok := a.signals[name]
+	a.signalsMutex.RUnlock()
+	return ok // We consider a worker to be running if it exists in the list of valid signal channels
+}
+
 // NewWorkerAdmin instantiates a new WorkerAdmin and returns a pointer to it.
 func NewWorkerAdmin(queueSize int, logger logging.LoggerInterface) *WorkerAdmin {
 	return &WorkerAdmin{
-		enabled: make(map[string]bool, 0),
+		signals: make(map[string]chan int, 0),
 		logger:  logger,
 		queue:   make(chan interface{}, queueSize),
 	}
