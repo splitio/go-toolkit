@@ -53,8 +53,11 @@ func (a *WorkerAdmin) workerWrapper(w Worker) {
 	}()
 	defer w.Cleanup()
 	for {
+		a.signalsMutex.RLock()
+		signal := a.signals[w.Name()]
+		a.signalsMutex.RUnlock()
 		select {
-		case msg := <-a.signals[w.Name()]:
+		case msg := <-signal:
 			switch msg {
 			case workerSignalStop:
 				return
@@ -110,7 +113,16 @@ func (a *WorkerAdmin) StopWorker(name string) error {
 // StopAll ends all worker's event loops
 func (a *WorkerAdmin) StopAll() error {
 	failed := make([]string, 0)
+	workerNames := make([]string, 0)
+
+	// Get worker names safely
+	a.signalsMutex.RLock()
 	for workerName := range a.signals {
+		workerNames = append(workerNames, workerName)
+	}
+	a.signalsMutex.RUnlock()
+
+	for _, workerName := range workerNames {
 		err := a.StopWorker(workerName)
 		if err != nil {
 			a.logger.Error(err)
