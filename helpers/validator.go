@@ -2,7 +2,6 @@ package helpers
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -91,7 +90,6 @@ func ValidateConfiguration(p interface{}, s map[string]interface{}) error {
 	}
 
 	secondaryFieldList := getFieldsForMap(s)
-	fmt.Println(secondaryFieldList)
 
 	err := validateParameters(secondaryFieldList, primarySet)
 	if err != nil {

@@ -1,7 +1,6 @@
 package helpers
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -117,7 +116,6 @@ func TestDifferentParentAndChild(t *testing.T) {
 	test := map[string]interface{}{"one": 10, "testChild": testChild}
 
 	err := ValidateConfiguration(origin, test)
-	fmt.Println(err.Error())
 	if err == nil {
 		t.Error("Should inform error")
 	}
