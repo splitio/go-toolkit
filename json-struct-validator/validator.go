@@ -1,6 +1,7 @@
-package helpers
+package validator
 
 import (
+	"encoding/json"
 	"errors"
 	"reflect"
 	"strings"
@@ -25,7 +26,7 @@ func getFieldsForStructRecursive(prefix string, structType reflect.Type) []strin
 		varType := structType.Field(i).Type
 		currentNames = append(currentNames, prefixToUse+name)
 		if varType.Kind() == reflect.Struct {
-			nestedNames := getFieldsForStructRecursive(name, varType)
+			nestedNames := getFieldsForStructRecursive(prefixToUse+name, varType)
 			currentNames = append(currentNames, nestedNames...)
 		}
 	}
@@ -52,7 +53,7 @@ func getFieldsForMapRecursive(prefix string, s map[string]interface{}) []string 
 			currentNames = append(currentNames, prefixToUse+name)
 		case map[string]interface{}:
 			currentNames = append(currentNames, prefixToUse+name)
-			nestedNames := getFieldsForMapRecursive(name, value)
+			nestedNames := getFieldsForMapRecursive(prefixToUse+name, value)
 			currentNames = append(currentNames, nestedNames...)
 		}
 	}
@@ -65,7 +66,7 @@ func getFieldsForMap(s map[string]interface{}) []string {
 
 func validateParameters(userConf []string, p *set.ThreadUnsafeSet) error {
 	for _, field := range userConf {
-		if p.Has(field) == false {
+		if !p.Has(field) {
 			return errors.New(field)
 		}
 	}
@@ -74,7 +75,7 @@ func validateParameters(userConf []string, p *set.ThreadUnsafeSet) error {
 
 // ValidateConfiguration compares s against p to validate each property
 // and section.
-func ValidateConfiguration(p interface{}, s map[string]interface{}) error {
+func ValidateConfiguration(p interface{}, s []byte) error {
 	if p == nil {
 		return errors.New("configuration cannot be null")
 	}
@@ -89,19 +90,17 @@ func ValidateConfiguration(p interface{}, s map[string]interface{}) error {
 		primarySet.Add(c)
 	}
 
-	secondaryFieldList := getFieldsForMap(s)
-
-	err := validateParameters(secondaryFieldList, primarySet)
+	m := map[string]interface{}{}
+	err := json.Unmarshal(s, &m)
 	if err != nil {
-		var m string
-		message := err.Error()
-		messageSplit := strings.Split(message, ".")
-		if len(messageSplit) == 1 {
-			m = "\"" + messageSplit[0] + "\" is not a valid section or property in configuration"
-		} else {
-			m = "\"" + messageSplit[1] + "\" in section \"" + messageSplit[0] + "\" is not valid configuration"
-		}
-		return errors.New(m)
+		return err
+	}
+
+	secondaryFieldList := getFieldsForMap(m)
+
+	err = validateParameters(secondaryFieldList, primarySet)
+	if err != nil {
+		return errors.New("\"" + err.Error() + "\" is not a valid property in configuration")
 	}
 	return nil
 }

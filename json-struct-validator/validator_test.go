@@ -1,4 +1,4 @@
-package helpers
+package validator
 
 import (
 	"testing"
@@ -12,9 +12,7 @@ func TestLen0(t *testing.T) {
 
 	originChild := OriginChild{two: "Test", three: 1}
 
-	test := make(map[string]interface{})
-
-	err := ValidateConfiguration(originChild, test)
+	err := ValidateConfiguration(originChild, nil)
 	if err == nil {
 		t.Error("Should inform error")
 	}
@@ -37,10 +35,7 @@ func TestSame(t *testing.T) {
 	originChild := OriginChild{Two: "Test", Three: 1}
 	origin := Origin{OriginChild: originChild, One: 1}
 
-	testChild := map[string]interface{}{"two": "test", "three": 10}
-	test := map[string]interface{}{"one": 10, "originChild": testChild}
-
-	err := ValidateConfiguration(origin, test)
+	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"two\": \"test\", \"three\": 10}}"))
 	if err != nil {
 		t.Error("Should not inform error")
 	}
@@ -60,14 +55,11 @@ func TestDifferentPropertyParent(t *testing.T) {
 	originChild := OriginChild{Two: "Test", Three: 1}
 	origin := Origin{OriginChild: originChild, One: 1}
 
-	testChild := map[string]interface{}{"two": "test", "three": 10}
-	test := map[string]interface{}{"four": 10, "originChild": testChild}
-
-	err := ValidateConfiguration(origin, test)
+	err := ValidateConfiguration(origin, []byte("{\"four\": 10, \"originChild\": {\"two\": \"test\", \"three\": 10}}"))
 	if err == nil {
 		t.Error("Should inform error")
 	}
-	if err.Error() != "\"four\" is not a valid section or property in configuration" {
+	if err.Error() != "\"four\" is not a valid property in configuration" {
 		t.Error("Wrong message")
 	}
 }
@@ -86,15 +78,12 @@ func TestDifferentPropertyChild(t *testing.T) {
 	originChild := OriginChild{Two: "Test", Three: 1}
 	origin := Origin{OriginChild: originChild, One: 1}
 
-	testChild := map[string]interface{}{"two": "test", "four": 10}
-	test := map[string]interface{}{"one": 10, "originChild": testChild}
-
-	err := ValidateConfiguration(origin, test)
+	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"two\": \"test\", \"four\": 10}}"))
 	if err == nil {
 		t.Error("Should inform error")
 	}
-	if err.Error() != "\"four\" in section \"originChild\" is not valid configuration" {
-		t.Error("Wrong message")
+	if err.Error() != "\"originChild.four\" is not a valid property in configuration" {
+		t.Error("Wrong message", err.Error())
 	}
 }
 
@@ -112,14 +101,11 @@ func TestDifferentParentAndChild(t *testing.T) {
 	originChild := OriginChild{Two: "Test", Three: 1}
 	origin := Origin{OriginChild: originChild, One: 1}
 
-	testChild := map[string]interface{}{"two": "test", "three": 10}
-	test := map[string]interface{}{"one": 10, "testChild": testChild}
-
-	err := ValidateConfiguration(origin, test)
+	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"testChild\": {\"two\": \"test\", \"three\": 10}}"))
 	if err == nil {
 		t.Error("Should inform error")
 	}
-	if err.Error() != "\"testChild\" is not a valid section or property in configuration" {
+	if err.Error() != "\"testChild\" is not a valid property in configuration" {
 		t.Error("Wrong message, it should inform parent")
 	}
 }
@@ -138,15 +124,12 @@ func TestDifferentPropertyInChild(t *testing.T) {
 	originChild := OriginChild{Two: "Test", Three: 1}
 	origin := Origin{OriginChild: originChild, One: 1}
 
-	testChild := map[string]interface{}{"two": "test", "three": 10, "four": 10}
-	test := map[string]interface{}{"one": 10, "originChild": testChild}
-
-	err := ValidateConfiguration(origin, test)
+	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"two\": \"test\", \"three\": 10, \"four\": 10}}"))
 	if err == nil {
 		t.Error("Should inform error")
 	}
-	if err.Error() != "\"four\" in section \"originChild\" is not valid configuration" {
-		t.Error("Wrong message=")
+	if err.Error() != "\"originChild.four\" is not a valid property in configuration" {
+		t.Error("Wrong message=", err.Error())
 	}
 }
 
@@ -164,14 +147,11 @@ func TestDifferentPropertyInChildBool(t *testing.T) {
 	originChild := OriginChild{Two: "Test", Three: 1}
 	origin := Origin{OriginChild: originChild, One: 1}
 
-	testChild := map[string]interface{}{"two": "test", "three": 10, "four": true}
-	test := map[string]interface{}{"one": 10, "originChild": testChild}
-
-	err := ValidateConfiguration(origin, test)
+	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"two\": \"test\", \"three\": 10, \"four\": true}}"))
 	if err == nil {
 		t.Error("Should inform error")
 	}
-	if err.Error() != "\"four\" in section \"originChild\" is not valid configuration" {
+	if err.Error() != "\"originChild.four\" is not a valid property in configuration" {
 		t.Error("Wrong message=")
 	}
 }
@@ -190,14 +170,68 @@ func TestDifferentPropertyInChildNumber(t *testing.T) {
 	originChild := OriginChild{Two: "Test", Three: 1}
 	origin := Origin{OriginChild: originChild, One: 1}
 
-	testChild := map[string]interface{}{"two": "test", "three": 10, "four": 10}
-	test := map[string]interface{}{"one": 10, "originChild": testChild}
-
-	err := ValidateConfiguration(origin, test)
+	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"two\": \"test\", \"three\": 10, \"four\": 10}}"))
 	if err == nil {
 		t.Error("Should inform error")
 	}
-	if err.Error() != "\"four\" in section \"originChild\" is not valid configuration" {
+	if err.Error() != "\"originChild.four\" is not a valid property in configuration" {
 		t.Error("Wrong message=")
+	}
+}
+
+func TestSameThirdLevel(t *testing.T) {
+	type Child struct {
+		Two   string `json:"two"`
+		Three int    `json:"three"`
+	}
+
+	type OriginChild struct {
+		Child Child `json:"child"`
+		Three int   `json:"three"`
+	}
+
+	type Origin struct {
+		OriginChild OriginChild `json:"originChild"`
+		One         int         `json:"one"`
+	}
+
+	child := Child{Two: "Test", Three: 1}
+	originChild := OriginChild{Child: child, Three: 1}
+	origin := Origin{OriginChild: originChild, One: 1}
+
+	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"child\": {\"two\": \"test\", \"three\": 10}, \"three\": 10}}"))
+	if err != nil {
+		t.Error(err.Error())
+
+		t.Error("Should not inform error")
+	}
+}
+
+func TestDifferenthirdLevel(t *testing.T) {
+	type Child struct {
+		Two   string `json:"two"`
+		Three int    `json:"three"`
+	}
+
+	type OriginChild struct {
+		Child Child `json:"child"`
+		Three int   `json:"three"`
+	}
+
+	type Origin struct {
+		OriginChild OriginChild `json:"originChild"`
+		One         int         `json:"one"`
+	}
+
+	child := Child{Two: "Test", Three: 1}
+	originChild := OriginChild{Child: child, Three: 1}
+	origin := Origin{OriginChild: originChild, One: 1}
+
+	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"child\": {\"t\": \"test\", \"three\": 10}, \"three\": 10}}"))
+	if err == nil {
+		t.Error("Should inform error")
+	}
+	if err.Error() != "\"originChild.child.t\" is not a valid property in configuration" {
+		t.Error("Wrong message", err.Error())
 	}
 }
