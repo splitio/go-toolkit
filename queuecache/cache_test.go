@@ -28,41 +28,41 @@ func TestCacheBasicUsage(t *testing.T) {
 		return toReturn, nil
 	}
 
-	//	myCache := New(10, fetchMore)
-	//	first5, err := myCache.Fetch(5)
-	//	if err != nil {
-	//		t.Error(err)
-	//	}
-	//
-	//	for index, item := range first5 {
-	//		asInt, ok := item.(int)
-	//		if !ok {
-	//			t.Error("Item should be stored as int and isn't")
-	//		}
-	//
-	//		if asInt != index {
-	//			t.Error("Each number should be equal to its index")
-	//		}
-	//	}
-	//
-	//	offset := 5
-	//	next5, err := myCache.Fetch(5)
-	//	if err != nil {
-	//		t.Error(err)
-	//	}
-	//	for index, item := range next5 {
-	//		asInt, ok := item.(int)
-	//		if !ok {
-	//			t.Error("Item should be stored as int and isn't")
-	//		}
-	//
-	//		if asInt != index+offset {
-	//			t.Error("Each number should be equal to its index")
-	//		}
-	//	}
+	myCache := New(10, fetchMore)
+	first5, err := myCache.Fetch(5)
+	if err != nil {
+		t.Error(err)
+	}
+
+	for index, item := range first5 {
+		asInt, ok := item.(int)
+		if !ok {
+			t.Error("Item should be stored as int and isn't")
+		}
+
+		if asInt != index {
+			t.Error("Each number should be equal to its index")
+		}
+	}
+
+	offset := 5
+	next5, err := myCache.Fetch(5)
+	if err != nil {
+		t.Error(err)
+	}
+	for index, item := range next5 {
+		asInt, ok := item.(int)
+		if !ok {
+			t.Error("Item should be stored as int and isn't")
+		}
+
+		if asInt != index+offset {
+			t.Error("Each number should be equal to its index")
+		}
+	}
 
 	index = 0
-	myCache := New(10, fetchMore)
+	myCache = New(10, fetchMore)
 	for i := 0; i < 100; i++ {
 		elem, err := myCache.Fetch(1)
 		if err != nil {
