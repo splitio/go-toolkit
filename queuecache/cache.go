@@ -2,6 +2,7 @@ package queuecache
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"sync"
 )
@@ -13,6 +14,18 @@ type RefillError struct {
 
 func (e *RefillError) Error() string {
 	return "Supplied refilling function panicked. See `.OriginalPanic` property to get panicked content"
+}
+
+// MessagesDroppedError is the Error to be returned when messages fail to be added to the queue.
+type MessagesDroppedError struct {
+	MessagesDropped int
+}
+
+func (e *MessagesDroppedError) Error() string {
+	return fmt.Sprintf(
+		"%d messages were dropped. Please report this error as it's most likely a bug in the library",
+		e.MessagesDropped,
+	)
 }
 
 // InMemoryQueueCacheOverlay offers an in-memory queue that gets re-populated whenever it runs out of items
@@ -83,13 +96,17 @@ func (i *InMemoryQueueCacheOverlay) Fetch(requestedCount int) ([]interface{}, er
 	defer i.lock.Unlock()
 	i.lock.Lock()
 
+	dropped := 0
 	if i.Count() < requestedCount {
 		toAdd, err := i.refillWrapper(i.maxSize - i.Count() - 1)
 		if err != nil {
 			return nil, err
 		}
 		for _, item := range toAdd {
-			i.write(item)
+			err = i.write(item)
+			if err != nil {
+				dropped++
+			}
 		}
 	}
 
@@ -102,6 +119,9 @@ func (i *InMemoryQueueCacheOverlay) Fetch(requestedCount int) ([]interface{}, er
 		toReturn[index] = elem
 	}
 
+	if dropped > 0 {
+		return toReturn, &MessagesDroppedError{MessagesDropped: dropped}
+	}
 	return toReturn, nil
 
 }
