@@ -36,14 +36,6 @@ func New(maxSize int, refillFunc func(count int) ([]interface{}, error)) *InMemo
 	}
 }
 
-/*
-SIZE - abs(W - R)
-
-R  W
-0  3  (10) ->
-3  0  (10) -> SIZE - (R - W)
-*/
-
 // Count returns the number of cached items
 func (i *InMemoryQueueCacheOverlay) Count() int {
 	if i.writeCursor == i.readCursor {
