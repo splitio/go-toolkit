@@ -131,3 +131,31 @@ func TestRefillPanic(t *testing.T) {
 		t.Error("Returned error should have been a RefillError")
 	}
 }
+
+func TestCountWorksProperly(t *testing.T) {
+	cache := InMemoryQueueCacheOverlay{maxSize: 100}
+
+	cache.readCursor = 0
+	cache.writeCursor = 0
+	if cache.Count() != 0 {
+		t.Error("Count should be 0 and is: ", cache.Count())
+	}
+
+	cache.readCursor = 0
+	cache.writeCursor = 1
+	if cache.Count() != 1 {
+		t.Error("Count should be 1 and is: ", cache.Count())
+	}
+
+	cache.readCursor = 50
+	cache.writeCursor = 99
+	if cache.Count() != 49 {
+		t.Error("Count should be 49 and is: ", cache.Count())
+	}
+
+	cache.readCursor = 50
+	cache.writeCursor = 20
+	if cache.Count() != 70 {
+		t.Error("Count should be 69 and is: ", cache.Count())
+	}
+}
