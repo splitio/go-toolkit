@@ -1,0 +1,2 @@
+1.0.1 (May 28, 2019)
+ - Fix issue in print-like function since go 1.11
