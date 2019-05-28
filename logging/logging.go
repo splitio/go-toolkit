@@ -33,27 +33,27 @@ type Logger struct {
 
 // Verbose logs a message with Debug level
 func (l *Logger) Verbose(msg ...interface{}) {
-	l.verboseLogger.Println(msg)
+	l.verboseLogger.Println(msg...)
 }
 
 // Debug logs a message with Debug level
 func (l *Logger) Debug(msg ...interface{}) {
-	l.debugLogger.Println(msg)
+	l.debugLogger.Println(msg...)
 }
 
 // Info logs a message with Info level
 func (l *Logger) Info(msg ...interface{}) {
-	l.infoLogger.Println(msg)
+	l.infoLogger.Println(msg...)
 }
 
 // Warning logs a message with Warning level
 func (l *Logger) Warning(msg ...interface{}) {
-	l.warningLogger.Println(msg)
+	l.warningLogger.Println(msg...)
 }
 
 // Error logs a message with Error level
 func (l *Logger) Error(msg ...interface{}) {
-	l.errorLogger.Println(msg)
+	l.errorLogger.Println(msg...)
 }
 
 func normalizeOptions(options *LoggerOptions) *LoggerOptions {
