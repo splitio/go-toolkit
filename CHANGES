@@ -1,0 +1,6 @@
+1.1.1 (Nov 24, 2019)
+ - Locking & Race condition audit fixes
+1.1.0 (May 30, 2019)
+ - Add caching structure for queues
+1.0.1 (May 28, 2019)
+ - Fix issue in print-like function since go 1.11
