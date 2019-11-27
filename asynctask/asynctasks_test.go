@@ -2,10 +2,11 @@ package asynctask
 
 import (
 	"errors"
-	"github.com/splitio/go-toolkit/logging"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/splitio/go-toolkit/logging"
 )
 
 func TestAsyncTaskNormalOperation(t *testing.T) {

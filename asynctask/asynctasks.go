@@ -2,9 +2,10 @@ package asynctask
 
 import (
 	"fmt"
-	"github.com/splitio/go-toolkit/logging"
 	"sync/atomic"
 	"time"
+
+	"github.com/splitio/go-toolkit/logging"
 )
 
 // AsyncTask is a struct that wraps tasks that should run periodically and can be remotely stopped & started,
