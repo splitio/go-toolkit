@@ -2,8 +2,10 @@ package asynctask
 
 import (
 	"fmt"
-	"github.com/splitio/go-toolkit/logging"
+	"sync/atomic"
 	"time"
+
+	"github.com/splitio/go-toolkit/logging"
 )
 
 // AsyncTask is a struct that wraps tasks that should run periodically and can be remotely stopped & started,
@@ -11,7 +13,7 @@ import (
 type AsyncTask struct {
 	task     func(l logging.LoggerInterface) error
 	name     string
-	running  bool
+	running  atomic.Value
 	incoming chan int
 	period   int
 	onInit   func(l logging.LoggerInterface) error
@@ -24,22 +26,31 @@ const (
 	taskMessageWakeup
 )
 
+func (t *AsyncTask) _running() bool {
+	res, ok := t.running.Load().(bool)
+	if !ok {
+		t.logger.Error("Error parsing async task status flag")
+		return false
+	}
+	return res
+}
+
 // Start initiates the task. It wraps the execution in a closure guarded by a call to recover() in order
 // to prevent the main application from crashin if something goes wrong while the sdk interacts with the backend.
 func (t *AsyncTask) Start() {
 
-	if t.running {
+	if t._running() {
 		if t.logger != nil {
 			t.logger.Warning("Task %s is already running. Aborting new execution.", t.name)
 		}
 		return
 	}
-	t.running = true
+	t.running.Store(true)
 
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				t.running = false
+				t.running.Store(false)
 				if t.logger != nil {
 					t.logger.Error(fmt.Sprintf(
 						"AsyncTask %s is panicking! Delaying execution for %d seconds (1 period)",
@@ -65,7 +76,7 @@ func (t *AsyncTask) Start() {
 		}
 
 		// Task execution
-		for t.running {
+		for t._running() {
 			// Run the wrapped task and handle the returned error if any.
 			err := t.task(t.logger)
 			if err != nil && t.logger != nil {
@@ -77,7 +88,7 @@ func (t *AsyncTask) Start() {
 			case msg := <-t.incoming:
 				switch msg {
 				case taskMessageStop:
-					t.running = false
+					t.running.Store(false)
 				case taskMessageWakeup:
 				}
 			case <-time.After(time.Second * time.Duration(t.period)):
@@ -112,7 +123,7 @@ func (t *AsyncTask) WakeUp() error {
 
 // IsRunning returns true if the task is currently running
 func (t *AsyncTask) IsRunning() bool {
-	return t.running
+	return t._running()
 }
 
 // NewAsyncTask creates a new task and returns a pointer to it
@@ -127,12 +138,12 @@ func NewAsyncTask(
 	t := AsyncTask{
 		name:     name,
 		task:     task,
-		running:  false,
 		period:   period,
 		onInit:   onInit,
 		onStop:   onStop,
 		logger:   logger,
 		incoming: make(chan int, 10),
 	}
+	t.running.Store(false)
 	return &t
 }

@@ -1,4 +1,0 @@
-1.1.0 (May 30, 2019)
- - Add queue cache
-1.0.1 (May 28, 2019)
- - Fix issue in print-like function since go 1.11
