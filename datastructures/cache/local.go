@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// LocalCache is an in-memory TTL & LRU cache implementation
 type LocalCache struct {
 	ttl    time.Duration
 	maxLen int
@@ -21,6 +22,7 @@ type entry struct {
 	value interface{}
 }
 
+// Get retrieves an item if exist, nil + an error otherwise
 func (c *LocalCache) Get(key string) (interface{}, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -39,6 +41,7 @@ func (c *LocalCache) Get(key string) (interface{}, error) {
 	return val, nil
 }
 
+// Set adds a new item. Since the cache being full results in removing the LRU element, this method never fails.
 func (c *LocalCache) Set(key string, value interface{}) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -61,6 +64,7 @@ func (c *LocalCache) Set(key string, value interface{}) error {
 	return nil
 }
 
+// NewLocalCache returns a new LocalCache instance of the specified size and TTL
 func NewLocalCache(maxSize int, ttl time.Duration) (*LocalCache, error) {
 	if maxSize <= 0 {
 		return nil, fmt.Errorf("Cache size should be > 0. Is: %d", maxSize)
