@@ -2,6 +2,8 @@ package cache
 
 import (
 	"fmt"
+	"math/rand"
+	"sync"
 	"testing"
 	"time"
 )
@@ -105,4 +107,33 @@ func TestLocalCache(t *testing.T) {
 			t.Errorf("Key 'someKey%d' should have expired at %+v. It did at %+v", i, ttl.Add(cache.ttl), asExpiredErr.When)
 		}
 	}
+}
+
+func TestLocalCacheHighConcurrency(t *testing.T) {
+
+	cache, err := NewLocalCache(500, 1*time.Second)
+	if err != nil {
+		t.Error("No error should have been returned. Got: ", err)
+	}
+
+	iterations := 500000
+	wg := sync.WaitGroup{}
+	wg.Add(iterations)
+	for i := 0; i < iterations; i++ {
+		r := rand.Intn(500)
+		if i%2 == 0 {
+			go func() {
+				defer wg.Done()
+				cache.Set(fmt.Sprintf("someKey%d", r), r)
+			}()
+
+		} else {
+			go func() {
+				defer wg.Done()
+				cache.Get(fmt.Sprintf("someKey%d", r))
+			}()
+		}
+	}
+
+	wg.Wait()
 }

@@ -31,14 +31,26 @@ func (c *LocalCache) Get(key string) (interface{}, error) {
 		return nil, &Miss{Where: "LOCAL", Key: key}
 	}
 
-	val := node.Value.(entry).value
+	entry, ok := node.Value.(entry)
+	if !ok {
+		return nil, fmt.Errorf("Invalid data in cache for key %s", key)
+	}
+
 	ttl, ok := c.ttls[key]
-	if !ok || time.Now().Sub(ttl) > c.ttl {
-		return nil, &Expired{Key: key, Value: val, When: ttl.Add(c.ttl)}
+	if !ok {
+		return nil, fmt.Errorf(
+			"Missing TTL for key %s. Wrapping as expired: %w",
+			key,
+			&Expired{Key: key, Value: entry.value, When: ttl.Add(c.ttl)},
+		)
+	}
+
+	if time.Now().Sub(ttl) > c.ttl {
+		return nil, &Expired{Key: key, Value: entry.value, When: ttl.Add(c.ttl)}
 	}
 
 	c.lru.MoveToFront(node)
-	return val, nil
+	return entry.value, nil
 }
 
 // Set adds a new item. Since the cache being full results in removing the LRU element, this method never fails.
@@ -51,7 +63,11 @@ func (c *LocalCache) Set(key string, value interface{}) error {
 	} else {
 		// Drop the LRU item on the list before adding a new one.
 		if c.lru.Len() == c.maxLen {
-			key := c.lru.Back().Value.(entry).key
+			entry, ok := c.lru.Back().Value.(entry)
+			if !ok {
+				return fmt.Errorf("Invalid data in list for key %s", key)
+			}
+			key := entry.key
 			delete(c.items, key)
 			c.lru.Remove(c.lru.Back())
 		}
@@ -60,7 +76,6 @@ func (c *LocalCache) Set(key string, value interface{}) error {
 		c.items[key] = ptr
 		c.ttls[key] = time.Now()
 	}
-
 	return nil
 }
 
