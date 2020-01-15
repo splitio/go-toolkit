@@ -11,13 +11,18 @@ type Layer interface {
 }
 
 // MultiLevelCache bundles a list of ordered cache layers (upper -> lower)
-type MultiLevelCache struct {
+type MultiLevelCache interface {
+	Get(key string) (interface{}, error)
+}
+
+// MultiLevelCacheImpl implements the MultiLevelCache interface
+type MultiLevelCacheImpl struct {
 	layers []Layer
 	logger logging.LoggerInterface
 }
 
 // Get returns the value of the requested key (if found) and populates upper levels with it
-func (c *MultiLevelCache) Get(key string) (interface{}, error) {
+func (c *MultiLevelCacheImpl) Get(key string) (interface{}, error) {
 	toUpdate := make([]int, 0, len(c.layers))
 	var toReturn interface{}
 	for index, layer := range c.layers {
@@ -55,10 +60,10 @@ func (c *MultiLevelCache) Get(key string) (interface{}, error) {
 }
 
 // NewMultiLevel creates and returns a new MultiLevelCache instance
-func NewMultiLevel(layers []Layer, logger logging.LoggerInterface) (*MultiLevelCache, error) {
+func NewMultiLevel(layers []Layer, logger logging.LoggerInterface) (*MultiLevelCacheImpl, error) {
 	if logger == nil {
 		logger = logging.NewLogger(nil)
 	}
 
-	return &MultiLevelCache{layers: layers, logger: logger}, nil
+	return &MultiLevelCacheImpl{layers: layers, logger: logger}, nil
 }
