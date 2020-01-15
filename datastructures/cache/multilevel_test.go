@@ -103,7 +103,7 @@ func TestMultiLevelCache(t *testing.T) {
 		},
 	}
 
-	cache := MultiLevelCache{
+	cache := MultiLevelCacheImpl{
 		logger: logging.NewLogger(nil),
 		layers: []Layer{topLayer, midLayer, bottomLayer},
 	}

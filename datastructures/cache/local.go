@@ -7,8 +7,14 @@ import (
 	"time"
 )
 
-// LocalCache is an in-memory TTL & LRU cache implementation
-type LocalCache struct {
+// LocalCache is an in-memory TTL & LRU cache
+type LocalCache interface {
+	Get(key string) (interface{}, error)
+	Set(key string, value interface{}) error
+}
+
+// LocalCacheImpl implements the LocalCache interface
+type LocalCacheImpl struct {
 	ttl    time.Duration
 	maxLen int
 	ttls   map[string]time.Time
@@ -23,7 +29,7 @@ type entry struct {
 }
 
 // Get retrieves an item if exist, nil + an error otherwise
-func (c *LocalCache) Get(key string) (interface{}, error) {
+func (c *LocalCacheImpl) Get(key string) (interface{}, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	node, ok := c.items[key]
@@ -54,7 +60,7 @@ func (c *LocalCache) Get(key string) (interface{}, error) {
 }
 
 // Set adds a new item. Since the cache being full results in removing the LRU element, this method never fails.
-func (c *LocalCache) Set(key string, value interface{}) error {
+func (c *LocalCacheImpl) Set(key string, value interface{}) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 	if node, ok := c.items[key]; ok {
@@ -80,12 +86,12 @@ func (c *LocalCache) Set(key string, value interface{}) error {
 }
 
 // NewLocalCache returns a new LocalCache instance of the specified size and TTL
-func NewLocalCache(maxSize int, ttl time.Duration) (*LocalCache, error) {
+func NewLocalCache(maxSize int, ttl time.Duration) (*LocalCacheImpl, error) {
 	if maxSize <= 0 {
 		return nil, fmt.Errorf("Cache size should be > 0. Is: %d", maxSize)
 	}
 
-	return &LocalCache{
+	return &LocalCacheImpl{
 		maxLen: maxSize,
 		ttl:    ttl,
 		lru:    new(list.List),
