@@ -11,3 +11,10 @@ func IntRef(number int) *int {
 func Int64Ref(number int64) *int64 {
 	return &number
 }
+
+func Int64Value(number *int64) int64 {
+	if number == nil {
+		return 0
+	}
+	return *number
+}
