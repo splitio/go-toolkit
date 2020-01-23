@@ -24,3 +24,14 @@ func TestIntRef(t *testing.T) {
 		t.Error("Wrong int reference")
 	}
 }
+
+func TestInt64Value(t *testing.T) {
+	a := int64(3)
+	if Int64Value(&a) != 3 {
+		t.Error("Should be 3")
+	}
+
+	if Int64Value(nil) != 0 {
+		t.Error("Should be 0")
+	}
+}
