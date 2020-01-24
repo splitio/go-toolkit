@@ -18,3 +18,24 @@ func Int64Value(number *int64) int64 {
 	}
 	return *number
 }
+
+func IntRefOrNil(number int) *int {
+	if number == 0 {
+		return nil
+	}
+	return IntRef(number)
+}
+
+func Int64RefOrNil(number int64) *int64 {
+	if number == 0 {
+		return nil
+	}
+	return Int64Ref(number)
+}
+
+func StringRefOrNil(str string) *string {
+	if str == "" {
+		return nil
+	}
+	return StringRef(str)
+}
