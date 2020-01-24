@@ -35,3 +35,36 @@ func TestInt64Value(t *testing.T) {
 		t.Error("Should be 0")
 	}
 }
+
+func TestStringRefOrNil(t *testing.T) {
+	a := "someString"
+	if a != *StringRefOrNil(a) {
+		t.Error("Wrong string reference")
+	}
+
+	if StringRefOrNil("") != nil {
+		t.Error("Should be nil")
+	}
+}
+
+func TestInt64RefOrNil(t *testing.T) {
+	a := int64(3)
+	if a != *Int64RefOrNil(a) {
+		t.Error("Wrong int64 reference")
+	}
+	if Int64RefOrNil(0) != nil {
+		t.Error("Should be nil")
+	}
+
+}
+
+func TestIntRefOrNil(t *testing.T) {
+	a := int(43)
+	if a != *IntRefOrNil(a) {
+		t.Error("Wrong int reference")
+	}
+	if IntRefOrNil(0) != nil {
+		t.Error("Should be nil")
+	}
+
+}
