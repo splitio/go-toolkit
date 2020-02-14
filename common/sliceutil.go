@@ -1,7 +1,7 @@
 package common
 
-// GenerateChunks generates chunkc considering the passed amount
-func GenerateChunks(items []string, maxItems int) [][]string {
+// Partition create partitions considering the passed amount
+func Partition(items []string, maxItems int) [][]string {
 	var splitted [][]string
 
 	for i := 0; i < len(items); i += maxItems {
