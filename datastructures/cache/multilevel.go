@@ -33,6 +33,10 @@ func (c *MultiLevelCacheImpl) Get(key string) (interface{}, error) {
 				// If it's a miss, push the index to the stack, if we eventually find the item,
 				// upper layers will be updated.
 				toUpdate = append(toUpdate, index)
+			case *Expired:
+				// If the key is expired, push the index to the stack, if we eventually find the item,
+				// upper layers will be updated.
+				toUpdate = append(toUpdate, index)
 			default:
 				// Any other error implies simply skipping this layer.
 				c.logger.Error(err)

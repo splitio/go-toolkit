@@ -20,6 +20,10 @@ func (m *LayerMock) Set(key string, value interface{}) error {
 }
 
 func TestMultiLevelCache(t *testing.T) {
+	// To test this we setup 3 layers of caching in order of querying: top -> mid -> bottom
+	// Top layer has key1, doesn't have key2 (returns Miss), has key3 expired and errors out when requesting any other Key
+	// Mid layer has key 2, returns a Miss on any other key, and fails the test if key1 is fetched (because it was present on top layer)
+	// Bottom layer fails if key1 or 2 are requested, has key 3. returns Miss if any other key is requested
 	calls := map[string]struct{}{}
 	topLayer := &LayerMock{
 		getCall: func(key string) (interface{}, error) {
@@ -28,6 +32,8 @@ func TestMultiLevelCache(t *testing.T) {
 				return "value1", nil
 			case "key2":
 				return nil, &Miss{Where: "layer1", Key: "key2"}
+			case "key3":
+				return nil, &Expired{Key: "key3", Value: "someOtherValue"}
 			default:
 				return nil, errors.New("someError")
 			}
@@ -39,10 +45,9 @@ func TestMultiLevelCache(t *testing.T) {
 			case "key2":
 				calls["top:set:key2"] = struct{}{}
 			case "key3":
-				t.Error("Set should not be called on the top layer for key3")
+				calls["top:set:key3"] = struct{}{}
 			default:
 				return errors.New("someError")
-
 			}
 			return nil
 		},
@@ -155,11 +160,15 @@ func TestMultiLevelCache(t *testing.T) {
 		t.Error("Top layer should have executed Set operation for key2")
 	}
 
+	if _, ok := calls["top:set:key3"]; !ok {
+		t.Error("Top layer should have executed Set operation for key3")
+	}
+
 	if _, ok := calls["mid:set:key3"]; !ok {
 		t.Error("Mid layer should have executed Set operation for key3")
 	}
 
-	if len(calls) != 2 {
-		t.Errorf("There should only be 2 calls of set operations. Got: %+v", calls)
+	if len(calls) != 3 {
+		t.Errorf("There should only be 3 calls of set operations. Got: %+v", calls)
 	}
 }
