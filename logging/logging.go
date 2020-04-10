@@ -3,9 +3,14 @@
 package logging
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"os"
+)
+
+const (
+	skipStackFrameBase = 3 // How many stack frames to skip when logging filename
 )
 
 // LoggerOptions ...
@@ -20,6 +25,7 @@ type LoggerOptions struct {
 	VerboseWriter       io.Writer
 	StandardLoggerFlags int
 	Prefix              string
+	ExtraFramesToSkip   int
 }
 
 // Logger struct. Encapsulates four different loggers, each for a different "level",
@@ -31,31 +37,32 @@ type Logger struct {
 	warningLogger log.Logger
 	errorLogger   log.Logger
 	verboseLogger log.Logger
+	framesToSkip  int
 }
 
 // Verbose logs a message with Debug level
 func (l *Logger) Verbose(msg ...interface{}) {
-	l.verboseLogger.Println(msg...)
+	l.verboseLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
 }
 
 // Debug logs a message with Debug level
 func (l *Logger) Debug(msg ...interface{}) {
-	l.debugLogger.Println(msg...)
+	l.debugLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
 }
 
 // Info logs a message with Info level
 func (l *Logger) Info(msg ...interface{}) {
-	l.infoLogger.Println(msg...)
+	l.infoLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
 }
 
 // Warning logs a message with Warning level
 func (l *Logger) Warning(msg ...interface{}) {
-	l.warningLogger.Println(msg...)
+	l.warningLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
 }
 
 // Error logs a message with Error level
 func (l *Logger) Error(msg ...interface{}) {
-	l.errorLogger.Println(msg...)
+	l.errorLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
 }
 
 func normalizeOptions(options *LoggerOptions) *LoggerOptions {
@@ -109,6 +116,7 @@ func NewLogger(options *LoggerOptions) LoggerInterface {
 		warningLogger: *log.New(options.WarningWriter, "WARNING - ", options.StandardLoggerFlags),
 		errorLogger:   *log.New(options.ErrorWriter, "ERROR - ", options.StandardLoggerFlags),
 		verboseLogger: *log.New(options.VerboseWriter, "VERBOSE - ", options.StandardLoggerFlags),
+		framesToSkip:  3 + options.ExtraFramesToSkip,
 	}
 
 	if options.Prefix != "" {
