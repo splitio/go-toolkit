@@ -24,9 +24,10 @@ type MultiLevelCacheImpl struct {
 // Get returns the value of the requested key (if found) and populates upper levels with it
 func (c *MultiLevelCacheImpl) Get(key string) (interface{}, error) {
 	toUpdate := make([]int, 0, len(c.layers))
-	var toReturn interface{}
+	var item interface{}
+	var err error
 	for index, layer := range c.layers {
-		item, err := layer.Get(key)
+		item, err = layer.Get(key)
 		if err != nil {
 			switch err.(type) {
 			case *Miss:
@@ -42,25 +43,24 @@ func (c *MultiLevelCacheImpl) Get(key string) (interface{}, error) {
 				c.logger.Error(err)
 			}
 		} else {
-			toReturn = item
 			break
 		}
 	}
 
-	if toReturn == nil {
+	if item == nil || err != nil {
 		return nil, &Miss{Where: "ALL_LEVELS", Key: key}
 	}
 
 	// Update upper layers if any
 	for _, index := range toUpdate {
 		if index < len(c.layers) { // Ignore any awkward index (if any)
-			err := c.layers[index].Set(key, toReturn)
+			err := c.layers[index].Set(key, item)
 			if err != nil {
 				c.logger.Error(err)
 			}
 		}
 	}
-	return toReturn, nil
+	return item, nil
 }
 
 // NewMultiLevel creates and returns a new MultiLevelCache instance

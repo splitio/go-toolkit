@@ -2,8 +2,10 @@ package cache
 
 import (
 	"errors"
-	"github.com/splitio/go-toolkit/logging"
+	"fmt"
 	"testing"
+
+	"github.com/splitio/go-toolkit/logging"
 )
 
 type LayerMock struct {
@@ -19,14 +21,40 @@ func (m *LayerMock) Set(key string, value interface{}) error {
 	return m.setCall(key, value)
 }
 
+type callTracker struct {
+	calls map[string]int
+	t     *testing.T
+}
+
+func newCallTracker(t *testing.T) *callTracker {
+	return &callTracker{calls: make(map[string]int), t: t}
+}
+
+func (c *callTracker) track(name string) { c.calls[name]++ }
+
+func (c *callTracker) reset() { c.calls = make(map[string]int) }
+
+func (c *callTracker) checkCall(name string, count int) {
+	if c.calls[name] != count {
+		c.t.Errorf("calls for '%s' should be %d", name, count)
+	}
+}
+
+func (c *callTracker) checkTotalCalls(count int) {
+	if len(c.calls) != count {
+		c.t.Errorf("The nomber of total calls should be '%d' and is '%d'", count, len(c.calls))
+	}
+}
+
 func TestMultiLevelCache(t *testing.T) {
 	// To test this we setup 3 layers of caching in order of querying: top -> mid -> bottom
 	// Top layer has key1, doesn't have key2 (returns Miss), has key3 expired and errors out when requesting any other Key
 	// Mid layer has key 2, returns a Miss on any other key, and fails the test if key1 is fetched (because it was present on top layer)
 	// Bottom layer fails if key1 or 2 are requested, has key 3. returns Miss if any other key is requested
-	calls := map[string]struct{}{}
+	calls := newCallTracker(t)
 	topLayer := &LayerMock{
 		getCall: func(key string) (interface{}, error) {
+			calls.track(fmt.Sprintf("top:get:%s", key))
 			switch key {
 			case "key1":
 				return "value1", nil
@@ -39,13 +67,15 @@ func TestMultiLevelCache(t *testing.T) {
 			}
 		},
 		setCall: func(key string, value interface{}) error {
+			calls.track(fmt.Sprintf("top:set:%s", key))
 			switch key {
 			case "key1":
 				t.Error("Set should not be called on the top layer for key1")
+				break
 			case "key2":
-				calls["top:set:key2"] = struct{}{}
+				break
 			case "key3":
-				calls["top:set:key3"] = struct{}{}
+				break
 			default:
 				return errors.New("someError")
 			}
@@ -55,6 +85,7 @@ func TestMultiLevelCache(t *testing.T) {
 
 	midLayer := &LayerMock{
 		getCall: func(key string) (interface{}, error) {
+			calls.track(fmt.Sprintf("mid:get:%s", key))
 			switch key {
 			case "key1":
 				t.Error("Get should not be called on the mid layer for key1")
@@ -66,13 +97,13 @@ func TestMultiLevelCache(t *testing.T) {
 			}
 		},
 		setCall: func(key string, value interface{}) error {
+			calls.track(fmt.Sprintf("mid:set:%s", key))
 			switch key {
 			case "key1":
 				t.Error("Set should not be called on the mid layer for key1")
 			case "key2":
 				t.Error("Set should not be called on the mid layer for key2")
 			case "key3":
-				calls["mid:set:key3"] = struct{}{}
 			default:
 				return errors.New("someError")
 			}
@@ -82,6 +113,7 @@ func TestMultiLevelCache(t *testing.T) {
 
 	bottomLayer := &LayerMock{
 		getCall: func(key string) (interface{}, error) {
+			calls.track(fmt.Sprintf("bot:get:%s", key))
 			switch key {
 			case "key1":
 				t.Error("Get should not be called on the mid layer for key1")
@@ -96,6 +128,7 @@ func TestMultiLevelCache(t *testing.T) {
 			}
 		},
 		setCall: func(key string, value interface{}) error {
+			calls.track(fmt.Sprintf("bot:set:%s", key))
 			switch key {
 			case "key1":
 				t.Error("Set should not be called on the mid layer for key1")
@@ -120,7 +153,10 @@ func TestMultiLevelCache(t *testing.T) {
 	if value1 != "value1" {
 		t.Error("Get 'key1' should return 'value1'. Got: ", value1)
 	}
+	calls.checkCall("top:get:key1", 1)
+	calls.checkTotalCalls(1)
 
+	calls.reset()
 	value2, err := cache.Get("key2")
 	if err != nil {
 		t.Error("No error should have been returned. Got: ", err)
@@ -128,7 +164,12 @@ func TestMultiLevelCache(t *testing.T) {
 	if value2 != "value2" {
 		t.Error("Get 'key2' should return 'value2'. Got: ", value2)
 	}
+	calls.checkCall("top:get:key2", 1)
+	calls.checkCall("mid:get:key2", 1)
+	calls.checkCall("top:set:key2", 1)
+	calls.checkTotalCalls(3)
 
+	calls.reset()
 	value3, err := cache.Get("key3")
 	if err != nil {
 		t.Error("Error should be nil. Was: ", err)
@@ -137,7 +178,14 @@ func TestMultiLevelCache(t *testing.T) {
 	if value3 != "value3" {
 		t.Error("Get 'key3' should return 'value3'. Got: ", value3)
 	}
+	calls.checkCall("top:get:key3", 1)
+	calls.checkCall("mid:get:key3", 1)
+	calls.checkCall("bot:get:key3", 1)
+	calls.checkCall("mid:set:key3", 1)
+	calls.checkCall("top:set:key3", 1)
+	calls.checkTotalCalls(5)
 
+	calls.reset()
 	value4, err := cache.Get("key4")
 	if err == nil {
 		t.Error("Error should be returned when getting nonexistant key.")
@@ -155,20 +203,8 @@ func TestMultiLevelCache(t *testing.T) {
 	if value4 != nil {
 		t.Errorf("Value returned for GET 'key4' should be nil. Is: %+v", value4)
 	}
-
-	if _, ok := calls["top:set:key2"]; !ok {
-		t.Error("Top layer should have executed Set operation for key2")
-	}
-
-	if _, ok := calls["top:set:key3"]; !ok {
-		t.Error("Top layer should have executed Set operation for key3")
-	}
-
-	if _, ok := calls["mid:set:key3"]; !ok {
-		t.Error("Mid layer should have executed Set operation for key3")
-	}
-
-	if len(calls) != 3 {
-		t.Errorf("There should only be 3 calls of set operations. Got: %+v", calls)
-	}
+	calls.checkCall("top:get:key4", 1)
+	calls.checkCall("top:get:key4", 1)
+	calls.checkCall("top:get:key4", 1)
+	calls.checkTotalCalls(3)
 }
