@@ -74,3 +74,19 @@ func (l *LevelFilteredLoggerWrapper) Verbose(is ...interface{}) {
 		l.delegate.Verbose(is...)
 	}
 }
+
+var levels map[string]int = map[string]int{
+	"ERROR":   LevelError,
+	"WARNING": LevelWarning,
+	"INFO":    LevelInfo,
+	"DEBUG":   LevelDebug,
+	"VERBOSE": LevelVerbose,
+}
+
+func Level(level string) int {
+	l, ok := levels[level]
+	if !ok {
+		panic("Invalid log level " + level)
+	}
+	return l
+}

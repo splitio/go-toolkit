@@ -11,14 +11,16 @@ import (
 // AsyncTask is a struct that wraps tasks that should run periodically and can be remotely stopped & started,
 // as well as making it's status (running/stopped) available.
 type AsyncTask struct {
-	task     func(l logging.LoggerInterface) error
-	name     string
-	running  atomic.Value
-	incoming chan int
-	period   int
-	onInit   func(l logging.LoggerInterface) error
-	onStop   func(l logging.LoggerInterface)
-	logger   logging.LoggerInterface
+	task       func(l logging.LoggerInterface) error
+	name       string
+	running    atomic.Value
+	incoming   chan int
+	period     int
+	onInit     func(l logging.LoggerInterface) error
+	onStop     func(l logging.LoggerInterface)
+	logger     logging.LoggerInterface
+	finished   bool
+	finishChan chan struct{}
 }
 
 const (
@@ -48,6 +50,10 @@ func (t *AsyncTask) Start() {
 	t.running.Store(true)
 
 	go func() {
+		defer func() {
+			t.finished = true
+			t.finishChan <- struct{}{}
+		}()
 		defer func() {
 			if r := recover(); r != nil {
 				t.running.Store(false)
@@ -111,9 +117,23 @@ func (t *AsyncTask) sendSignal(signal int) error {
 	}
 }
 
-// Stop prevents future executions of the task
-func (t *AsyncTask) Stop() error {
-	return t.sendSignal(taskMessageStop)
+// Stop executes onStop hook if any, blocks until its done (if blocking = true) and prevents future executions of the task.
+func (t *AsyncTask) Stop(blocking bool) error {
+
+	if t.finished {
+		// Task already stopped
+		return nil
+	}
+	if err := t.sendSignal(taskMessageStop); err != nil {
+		// If the signal couldnt be sent, return error!
+		return err
+	}
+
+	if blocking {
+		// If blocking was set to true, wait until an empty strcut is pushed into the channel
+		<-t.finishChan
+	}
+	return nil
 }
 
 // WakeUp interrupts the task's sleep period and resumes execution
@@ -136,13 +156,15 @@ func NewAsyncTask(
 	logger logging.LoggerInterface,
 ) *AsyncTask {
 	t := AsyncTask{
-		name:     name,
-		task:     task,
-		period:   period,
-		onInit:   onInit,
-		onStop:   onStop,
-		logger:   logger,
-		incoming: make(chan int, 10),
+		name:       name,
+		task:       task,
+		period:     period,
+		onInit:     onInit,
+		onStop:     onStop,
+		logger:     logger,
+		incoming:   make(chan int, 10),
+		finishChan: make(chan struct{}, 1),
+		finished:   false,
 	}
 	t.running.Store(false)
 	return &t

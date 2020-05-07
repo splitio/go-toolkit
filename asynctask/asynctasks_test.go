@@ -33,8 +33,7 @@ func TestAsyncTaskNormalOperation(t *testing.T) {
 	}
 	time.Sleep(1 * time.Second)
 
-	task1.Stop()
-	time.Sleep(1 * time.Second)
+	task1.Stop(true)
 	if task1.IsRunning() {
 		t.Error("Task should be stopped")
 	}
@@ -93,10 +92,7 @@ func TestAsyncTaskPanics(t *testing.T) {
 
 	task3.Start()
 	time.Sleep(time.Second * 2)
-	task3.Stop()
-
-	time.Sleep(time.Second * 2)
-
+	task3.Stop(true)
 	if task1.IsRunning() {
 		t.Error("Task1 is running and should be stopped")
 	}
@@ -123,7 +119,7 @@ func TestAsyncTaskErrors(t *testing.T) {
 
 	task1.Start()
 	time.Sleep(time.Second * 3)
-	task1.Stop()
+	task1.Stop(true)
 
 	if res.Load().(int) < 2 {
 		t.Error("Task should have executed at least two times")
@@ -165,9 +161,7 @@ func TestAsyncTaskWakeUp(t *testing.T) {
 	_ = task1.WakeUp()
 	time.Sleep(time.Second * 1)
 	_ = task1.WakeUp()
-	_ = task1.Stop()
-
-	time.Sleep(time.Second * 2)
+	_ = task1.Stop(true)
 
 	if res.Load().(int) != 4 {
 		t.Errorf("Task shuld have executed 4 times. It ran %d times", res)
