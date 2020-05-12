@@ -78,9 +78,13 @@ func (p *PrefixedRedisClient) SRem(key string, members ...string) (int64, error)
 }
 
 // Exists returns true if a key exists in redis
-func (p *PrefixedRedisClient) Exists(key string) (bool, error) {
-	val, err := p.client.Exists(p.withPrefix(key)).Result()
-	return (val == 1), err
+func (p *PrefixedRedisClient) Exists(keys ...string) (int64, error) {
+	prefixedKeys := make([]string, len(keys))
+	for i, k := range keys {
+		prefixedKeys[i] = p.withPrefix(k)
+	}
+	val, err := p.client.Exists(prefixedKeys...).Result()
+	return val, err
 }
 
 // Incr increments a key. Sets it in one if it doesn't exist

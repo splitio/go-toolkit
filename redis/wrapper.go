@@ -110,36 +110,41 @@ func (c *ClientImpl) wrapResult(result interface{}) Result {
 		return nil
 	}
 	switch v := result.(type) {
-	case redis.IntCmd:
+	case *redis.StatusCmd:
+		return &ResultImpl{
+			valueString: v.Val(),
+			err:         v.Err(),
+		}
+	case *redis.IntCmd:
 		return &ResultImpl{
 			value:       v.Val(),
 			valueString: v.String(),
 			err:         v.Err(),
 		}
-	case redis.StringCmd:
+	case *redis.StringCmd:
 		return &ResultImpl{
-			valueString: v.String(),
+			valueString: v.Val(),
 			err:         v.Err(),
 		}
-	case redis.StringSliceCmd:
+	case *redis.StringSliceCmd:
 		return &ResultImpl{
-			valueString: v.String(),
-			err:         v.Err(),
-			multi:       v.Val(),
+			err:   v.Err(),
+			multi: v.Val(),
 		}
-	case redis.BoolCmd:
+	case *redis.BoolCmd:
 		return &ResultImpl{
 			valueBool: v.Val(),
 			err:       v.Err(),
 		}
-	case redis.DurationCmd:
+	case *redis.DurationCmd:
 		return &ResultImpl{
 			valueDuration: v.Val(),
 			err:           v.Err(),
 		}
-	case redis.SliceCmd:
+	case *redis.SliceCmd:
 		return &ResultImpl{
-			err: v.Err(),
+			err:            v.Err(),
+			multiInterface: v.Val(),
 		}
 	default:
 		return nil
