@@ -117,9 +117,8 @@ func (c *ClientImpl) wrapResult(result interface{}) Result {
 		}
 	case *redis.IntCmd:
 		return &ResultImpl{
-			value:       v.Val(),
-			valueString: v.String(),
-			err:         v.Err(),
+			value: v.Val(),
+			err:   v.Err(),
 		}
 	case *redis.StringCmd:
 		return &ResultImpl{

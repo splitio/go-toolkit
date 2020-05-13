@@ -137,7 +137,7 @@ func (m *MockClient) Incr(key string) redis.Result {
 
 // RPush mocks RPush
 func (m *MockClient) RPush(key string, values ...interface{}) redis.Result {
-	return m.RPushCall(key)
+	return m.RPushCall(key, values...)
 }
 
 // LRange mocks LRange

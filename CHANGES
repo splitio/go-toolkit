@@ -1,3 +1,7 @@
+2.1.0 ()
+ - Add redis wrapper.
+2.0.0 ()
+ - 
 1.1.1 (Nov 28, 2019)
  - Locking & Race condition audit fixes
 1.1.0 (May 30, 2019)
