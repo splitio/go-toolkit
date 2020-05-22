@@ -88,8 +88,13 @@ func (p *PrefixedRedisClient) Exists(keys ...string) (int64, error) {
 }
 
 // Incr increments a key. Sets it in one if it doesn't exist
-func (p *PrefixedRedisClient) Incr(key string) error {
-	return p.Client.Incr(p.withPrefix(key)).Err()
+func (p *PrefixedRedisClient) Incr(key string) (int64, error) {
+	return p.Client.Incr(p.withPrefix(key)).Result()
+}
+
+// Decr increments a key. Sets it in one if it doesn't exist
+func (p *PrefixedRedisClient) Decr(key string) (int64, error) {
+	return p.Client.Decr(p.withPrefix(key)).Result()
 }
 
 // RPush insert all the specified values at the tail of the list stored at key
@@ -108,8 +113,8 @@ func (p *PrefixedRedisClient) LTrim(key string, start, stop int64) error {
 }
 
 // LLen Returns the length of the list stored at key
-func (p *PrefixedRedisClient) LLen(key string) int64 {
-	return p.Client.LLen(p.withPrefix(key)).Int()
+func (p *PrefixedRedisClient) LLen(key string) (int64, error) {
+	return p.Client.LLen(p.withPrefix(key)).Result()
 }
 
 // Expire set expiration time for particular key
@@ -129,6 +134,16 @@ func (p *PrefixedRedisClient) MGet(keys []string) ([]interface{}, error) {
 		keysWithPrefix = append(keysWithPrefix, p.withPrefix(key))
 	}
 	return p.Client.MGet(keysWithPrefix).MultiInterface()
+}
+
+// SCard implements SCard wrapper for redis
+func (p *PrefixedRedisClient) SCard(key string) (int64, error) {
+	return p.Client.SCard(p.withPrefix(key)).Result()
+}
+
+// Eval implements Eval wrapper for redis
+func (p *PrefixedRedisClient) Eval(script string, keys []string, args ...interface{}) error {
+	return p.Client.Eval(script, keys, args...).Err()
 }
 
 // NewPrefixedRedisClient returns a new Prefixed Redis Client

@@ -76,6 +76,7 @@ type MockClient struct {
 	SAddCall     func(key string, members ...interface{}) redis.Result
 	SRemCall     func(key string, members ...interface{}) redis.Result
 	IncrCall     func(key string) redis.Result
+	DecrCall     func(key string) redis.Result
 	RPushCall    func(key string, values ...interface{}) redis.Result
 	LRangeCall   func(key string, start, stop int64) redis.Result
 	LTrimCall    func(key string, start, stop int64) redis.Result
@@ -83,6 +84,8 @@ type MockClient struct {
 	ExpireCall   func(key string, value time.Duration) redis.Result
 	TTLCall      func(key string) redis.Result
 	MGetCall     func(keys []string) redis.Result
+	SCardCall    func(key string) redis.Result
+	EvalCall     func(script string, keys []string, args ...interface{}) redis.Result
 }
 
 // Del mocks get
@@ -135,6 +138,11 @@ func (m *MockClient) Incr(key string) redis.Result {
 	return m.IncrCall(key)
 }
 
+// Decr mocks Decr
+func (m *MockClient) Decr(key string) redis.Result {
+	return m.DecrCall(key)
+}
+
 // RPush mocks RPush
 func (m *MockClient) RPush(key string, values ...interface{}) redis.Result {
 	return m.RPushCall(key, values...)
@@ -168,4 +176,14 @@ func (m *MockClient) TTL(key string) redis.Result {
 // MGet mocks MGet
 func (m *MockClient) MGet(keys []string) redis.Result {
 	return m.MGetCall(keys)
+}
+
+// SCard mocks SCard
+func (m *MockClient) SCard(key string) redis.Result {
+	return m.SCardCall(key)
+}
+
+// Eval mocks Eval
+func (m *MockClient) Eval(script string, keys []string, args ...interface{}) redis.Result {
+	return m.EvalCall(script, keys, args...)
 }

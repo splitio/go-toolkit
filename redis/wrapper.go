@@ -91,6 +91,7 @@ type Client interface {
 	SAdd(key string, members ...interface{}) Result
 	SRem(key string, members ...interface{}) Result
 	Incr(key string) Result
+	Decr(key string) Result
 	RPush(key string, values ...interface{}) Result
 	LRange(key string, start, stop int64) Result
 	LTrim(key string, start, stop int64) Result
@@ -98,6 +99,8 @@ type Client interface {
 	Expire(key string, value time.Duration) Result
 	TTL(key string) Result
 	MGet(keys []string) Result
+	SCard(key string) Result
+	Eval(script string, keys []string, args ...interface{}) Result
 }
 
 // ClientImpl wrapps redis client
@@ -144,6 +147,10 @@ func (c *ClientImpl) wrapResult(result interface{}) Result {
 		return &ResultImpl{
 			err:            v.Err(),
 			multiInterface: v.Val(),
+		}
+	case *redis.Cmd:
+		return &ResultImpl{
+			err: v.Err(),
 		}
 	default:
 		return nil
@@ -210,6 +217,12 @@ func (c *ClientImpl) Incr(key string) Result {
 	return c.wrapResult(res)
 }
 
+// Decr implements Decr wrapper for redis
+func (c *ClientImpl) Decr(key string) Result {
+	res := c.wrapped.Decr(key)
+	return c.wrapResult(res)
+}
+
 // RPush implements RPush wrapper for redis
 func (c *ClientImpl) RPush(key string, values ...interface{}) Result {
 	res := c.wrapped.RPush(key, values...)
@@ -249,6 +262,18 @@ func (c *ClientImpl) TTL(key string) Result {
 // MGet implements MGet wrapper for redis
 func (c *ClientImpl) MGet(keys []string) Result {
 	res := c.wrapped.MGet(keys...)
+	return c.wrapResult(res)
+}
+
+// SCard implements SCard wrapper for redis
+func (c *ClientImpl) SCard(key string) Result {
+	res := c.wrapped.SCard(key)
+	return c.wrapResult(res)
+}
+
+// Eval implements Eval wrapper for redis
+func (c *ClientImpl) Eval(script string, keys []string, args ...interface{}) Result {
+	res := c.wrapped.Eval(script, keys, args...)
 	return c.wrapResult(res)
 }
 
