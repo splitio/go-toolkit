@@ -1,3 +1,10 @@
+2.1.0 ()
+ - Add redis wrapper.
+2.0.0 (May 7, 2020)
+ - Added Queue Cache.
+ - Added BackOff logic.
+ - Added MultiLevel and local cache.
+ - Added Utils.
 1.1.1 (Nov 28, 2019)
  - Locking & Race condition audit fixes
 1.1.0 (May 30, 2019)
