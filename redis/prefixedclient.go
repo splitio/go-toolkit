@@ -73,7 +73,7 @@ func (p *PrefixedRedisClient) SAdd(key string, members ...interface{}) (int64, e
 }
 
 // SRem removes members from a set
-func (p *PrefixedRedisClient) SRem(key string, members ...string) (int64, error) {
+func (p *PrefixedRedisClient) SRem(key string, members ...interface{}) (int64, error) {
 	return p.Client.SRem(p.withPrefix(key), members).Result()
 }
 
