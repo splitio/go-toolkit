@@ -46,27 +46,6 @@ func (l *SSEClient) Shutdown() {
 	l.mainWG.Wait()
 }
 
-/*
-// Event struct
-type Event struct {
-	ID        string `json:"id"`
-	Data      string `json:"data"`
-	Event     string `json:"event"`
-	Retry     string `json:"retry"`
-	Timestamp int64  `json:"timestamp"`
-}
-
-// NewEvent creates event
-func NewEvent(raw []byte) (*Event, error) {
-	e := Event{}
-	err := json.Unmarshal(raw, &e)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing 1st level json: %w", err)
-	}
-	return &e, nil
-}
-*/
-
 func parseData(raw []byte) (map[string]interface{}, error) {
 	data := make(map[string]interface{})
 	err := json.Unmarshal(raw, &data)
@@ -131,7 +110,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 			}
 
 			raw := bytes.TrimSpace(splitted[1])
-			// eventData, err := NewEvent(data)
 			data, err := parseData(raw)
 			if err != nil {
 				l.logger.Error("Error parsing event: ", err)
@@ -139,7 +117,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 
 			go func() {
 				activeGoroutines.Add(1)
-				// callback(*eventData)
 				callback(data)
 				activeGoroutines.Done()
 			}()
