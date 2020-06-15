@@ -90,3 +90,52 @@ func TestSSE(t *testing.T) {
 		t.Error("Unexpected result")
 	}
 }
+
+func TestSSEKeepAlive(t *testing.T) {
+	logger := logging.NewLogger(&logging.LoggerOptions{})
+
+	mockedClient := SSEClient{
+		client:   http.Client{},
+		logger:   logger,
+		mainWG:   sync.WaitGroup{},
+		shutdown: make(chan struct{}, 1),
+		sseReady: make(chan struct{}, 1),
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		flusher, err := w.(http.Flusher)
+		if !err {
+			t.Error("Unexpected error")
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+
+		fmt.Fprintf(w, ":keepalive")
+		flusher.Flush()
+
+		go func() {
+			time.Sleep(50 * time.Millisecond)
+			mockedClient.Shutdown()
+		}()
+	}))
+	defer ts.Close()
+
+	ts.Config.SetKeepAlivesEnabled(false)
+
+	mockedClient.url = ts.URL
+
+	var result map[string]interface{}
+
+	err := mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
+		result = e
+	})
+
+	if err != nil {
+		t.Error("It should not return error")
+	}
+	if result["event"] != "keepalive" {
+		t.Error("Unexpected result")
+	}
+}

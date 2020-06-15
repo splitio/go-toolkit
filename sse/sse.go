@@ -15,6 +15,7 @@ import (
 
 var sseDelimiter [2]byte = [...]byte{':', ' '}
 var sseData [4]byte = [...]byte{'d', 'a', 't', 'a'}
+var sseKeepAlive [10]byte = [...]byte{':', 'k', 'e', 'e', 'p', 'a', 'l', 'i', 'v', 'e'}
 
 // SSEClient struct
 type SSEClient struct {
@@ -42,6 +43,8 @@ func NewSSEClient(url string, ready chan struct{}, logger logging.LoggerInterfac
 func (l *SSEClient) Shutdown() {
 	select {
 	case l.shutdown <- struct{}{}:
+	default:
+		l.logger.Error("Awaited unexpected event")
 	}
 	l.mainWG.Wait()
 }
@@ -52,6 +55,38 @@ func parseData(raw []byte) (map[string]interface{}, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error parsing json: %w", err)
 	}
+	return data, nil
+}
+
+func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, error) {
+	line, err := reader.ReadBytes('\n')
+	if err != nil && err != io.EOF {
+		return nil, err
+	}
+
+	if len(line) < 2 {
+		return nil, nil
+	}
+
+	splitted := bytes.Split(line, sseDelimiter[:])
+
+	if bytes.Contains(splitted[0], sseKeepAlive[:]) {
+		data := make(map[string]interface{})
+		data["event"] = string(sseKeepAlive[1:])
+		return data, nil
+	}
+
+	if bytes.Compare(splitted[0], sseData[:]) != 0 {
+		return nil, nil
+	}
+
+	raw := bytes.TrimSpace(splitted[1])
+	data, err := parseData(raw)
+	if err != nil {
+		l.logger.Error("Error parsing event: ", err)
+		return nil, nil
+	}
+
 	return data, nil
 }
 
@@ -95,31 +130,19 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 			shouldKeepRunning = false
 			break
 		default:
-			line, err := reader.ReadBytes('\n')
-			if err != nil && err != io.EOF {
-				panic(err.Error())
-			}
-
-			if len(line) < 2 {
-				continue
-			}
-
-			splitted := bytes.Split(line, sseDelimiter[:])
-			if bytes.Compare(splitted[0], sseData[:]) != 0 {
-				continue
-			}
-
-			raw := bytes.TrimSpace(splitted[1])
-			data, err := parseData(raw)
+			event, err := l.readEvent(reader)
 			if err != nil {
-				l.logger.Error("Error parsing event: ", err)
+				l.logger.Error(err)
+				l.Shutdown()
 			}
 
-			go func() {
+			if event != nil {
 				activeGoroutines.Add(1)
-				callback(data)
-				activeGoroutines.Done()
-			}()
+				go func() {
+					callback(event)
+					activeGoroutines.Done()
+				}()
+			}
 		}
 	}
 	l.logger.Info("SSE streaming exiting")
