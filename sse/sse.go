@@ -50,7 +50,7 @@ func parseData(raw []byte) (map[string]interface{}, error) {
 	data := make(map[string]interface{})
 	err := json.Unmarshal(raw, &data)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing 1st level json: %w", err)
+		return nil, fmt.Errorf("error parsing json: %w", err)
 	}
 	return data, nil
 }
