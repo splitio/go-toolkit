@@ -4,23 +4,28 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"sync"
 	"testing"
-	"time"
 
 	"github.com/splitio/go-toolkit/logging"
 )
 
 func TestSSEError(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
+	clientErr, err := NewSSEClient("", make(chan int), logger)
+	if clientErr != nil {
+		t.Error("It should be nil")
+	}
+	if err == nil || err.Error() != "Status channel should have length" {
+		t.Error("It should return err")
+	}
 
-	sseError := make(chan error, 1)
-	client := NewSSEClient("", make(chan struct{}, 1), sseError, logger)
+	status := make(chan int, 1)
+	client, _ := NewSSEClient("", status, logger)
 	client.Do(make(map[string]string), func(e map[string]interface{}) { t.Error("It should not execute anything") })
 
-	err := <-sseError
-	if err == nil || err.Error() != "Could not perform request" {
-		t.Error("It should not be nil")
+	stats := <-status
+	if stats != ErrorRequestPerformed {
+		t.Error("Unexpected type of error")
 	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -30,35 +35,25 @@ func TestSSEError(t *testing.T) {
 
 	mockedClient := SSEClient{
 		client:   http.Client{},
-		logger:   logger,
-		mainWG:   sync.WaitGroup{},
+		status:   status,
+		stopped:  make(chan struct{}, 1),
 		shutdown: make(chan struct{}, 1),
-		sseReady: make(chan struct{}, 1),
-		sseError: sseError,
 		url:      ts.URL,
+		logger:   logger,
 	}
 
 	mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
 		t.Error("Should not execute callback")
 	})
 
-	err = <-sseError
-	if err == nil || err.Error() != "Could not connect to streaming" {
-		t.Error("Unexpected error")
+	stats = <-status
+	if stats != ErrorConnectToStreaming {
+		t.Error("Unexpected type of error")
 	}
 }
 
 func TestSSE(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
-
-	mockedClient := SSEClient{
-		client:   http.Client{},
-		logger:   logger,
-		mainWG:   sync.WaitGroup{},
-		shutdown: make(chan struct{}, 1),
-		sseReady: make(chan struct{}, 1),
-		sseError: make(chan error, 1),
-	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		flusher, err := w.(http.Flusher)
@@ -72,20 +67,30 @@ func TestSSE(t *testing.T) {
 
 		fmt.Fprintf(w, "data: %s\n\n", "{\"id\":\"YCh53QfLxO:0:0\",\"data\":\"some\",\"timestamp\":1591911770828}")
 		flusher.Flush()
-
-		go func() {
-			time.Sleep(100 * time.Millisecond)
-			mockedClient.Shutdown()
-		}()
 	}))
 	defer ts.Close()
 
-	mockedClient.url = ts.URL
+	status := make(chan int, 1)
+	mockedClient := SSEClient{
+		client:   http.Client{},
+		logger:   logger,
+		stopped:  make(chan struct{}, 1),
+		shutdown: make(chan struct{}, 1),
+		status:   status,
+		url:      ts.URL,
+	}
 
 	var result map[string]interface{}
-	mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
+	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
 		result = e
 	})
+
+	ready := <-status
+	if ready != OK {
+		t.Error("It should send ready flag")
+	}
+
+	mockedClient.Shutdown()
 
 	if result["data"] != "some" {
 		t.Error("Unexpected result")
@@ -94,15 +99,6 @@ func TestSSE(t *testing.T) {
 
 func TestSSEKeepAlive(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
-
-	mockedClient := SSEClient{
-		client:   http.Client{},
-		logger:   logger,
-		mainWG:   sync.WaitGroup{},
-		shutdown: make(chan struct{}, 1),
-		sseReady: make(chan struct{}, 1),
-		sseError: make(chan error, 1),
-	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		flusher, err := w.(http.Flusher)
@@ -116,20 +112,30 @@ func TestSSEKeepAlive(t *testing.T) {
 
 		fmt.Fprintf(w, ":keepalive")
 		flusher.Flush()
-
-		go func() {
-			time.Sleep(100 * time.Millisecond)
-			mockedClient.Shutdown()
-		}()
 	}))
 	defer ts.Close()
 
-	mockedClient.url = ts.URL
+	status := make(chan int, 1)
+	mockedClient := SSEClient{
+		client:   http.Client{},
+		logger:   logger,
+		stopped:  make(chan struct{}, 1),
+		shutdown: make(chan struct{}, 1),
+		url:      ts.URL,
+		status:   status,
+	}
 
 	var result map[string]interface{}
-	mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
+	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
 		result = e
 	})
+
+	ready := <-status
+	if ready != OK {
+		t.Error("It should send ready flag")
+	}
+
+	mockedClient.Shutdown()
 
 	if result["event"] != "keepalive" {
 		t.Error("Unexpected result")
