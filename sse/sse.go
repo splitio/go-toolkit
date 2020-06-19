@@ -134,7 +134,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
 			shouldKeepRunning = false
-			return
 		default:
 			event, err := l.readEvent(reader)
 			if err != nil {
@@ -146,8 +145,8 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 			if event != nil {
 				activeGoroutines.Add(1)
 				go func() {
+					defer activeGoroutines.Done()
 					callback(event)
-					activeGoroutines.Done()
 				}()
 			}
 		}

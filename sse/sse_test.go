@@ -72,21 +72,20 @@ func TestSSE(t *testing.T) {
 
 		fmt.Fprintf(w, "data: %s\n\n", "{\"id\":\"YCh53QfLxO:0:0\",\"data\":\"some\",\"timestamp\":1591911770828}")
 		flusher.Flush()
+
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			mockedClient.Shutdown()
+		}()
 	}))
 	defer ts.Close()
-
-	ts.Config.SetKeepAlivesEnabled(false)
 
 	mockedClient.url = ts.URL
 
 	var result map[string]interface{}
-
-	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
+	mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
 		result = e
 	})
-
-	time.Sleep(500 * time.Millisecond)
-	mockedClient.Shutdown()
 
 	if result["data"] != "some" {
 		t.Error("Unexpected result")
@@ -117,20 +116,21 @@ func TestSSEKeepAlive(t *testing.T) {
 
 		fmt.Fprintf(w, ":keepalive")
 		flusher.Flush()
+
+		go func() {
+			time.Sleep(100 * time.Millisecond)
+			mockedClient.Shutdown()
+		}()
 	}))
 	defer ts.Close()
-
-	ts.Config.SetKeepAlivesEnabled(false)
 
 	mockedClient.url = ts.URL
 
 	var result map[string]interface{}
-
-	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
+	mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
 		result = e
 	})
 
-	time.Sleep(500 * time.Millisecond)
 	if result["event"] != "keepalive" {
 		t.Error("Unexpected result")
 	}
