@@ -22,17 +22,19 @@ type SSEClient struct {
 	url      string
 	client   http.Client
 	sseReady chan struct{}
+	sseError chan error
 	shutdown chan struct{}
 	mainWG   sync.WaitGroup
 	logger   logging.LoggerInterface
 }
 
 // NewSSEClient creates new SSEClient
-func NewSSEClient(url string, ready chan struct{}, logger logging.LoggerInterface) *SSEClient {
+func NewSSEClient(url string, ready chan struct{}, sseError chan error, logger logging.LoggerInterface) *SSEClient {
 	return &SSEClient{
 		url:      url,
 		client:   http.Client{},
 		sseReady: ready,
+		sseError: sseError,
 		shutdown: make(chan struct{}, 1),
 		mainWG:   sync.WaitGroup{},
 		logger:   logger,
@@ -60,6 +62,7 @@ func parseData(raw []byte) (map[string]interface{}, error) {
 
 func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, error) {
 	line, err := reader.ReadBytes('\n')
+	l.logger.Info("LINE:", string(line))
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
@@ -91,13 +94,14 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 }
 
 // Do starts streaming
-func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) error {
+func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) {
 	l.mainWG.Add(1)
 	defer l.mainWG.Done()
 
 	req, err := http.NewRequest("GET", l.url, nil)
 	if err != nil {
-		return errors.New("Could not create client")
+		l.sseError <- errors.New("Could not create client")
+		return
 	}
 
 	query := req.URL.Query()
@@ -110,10 +114,12 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 
 	resp, err := l.client.Do(req)
 	if err != nil {
-		return errors.New("Could not perform request")
+		l.sseError <- errors.New("Could not perform request")
+		return
 	}
 	if resp.StatusCode != 200 {
-		return errors.New("Could not connect to streaming")
+		l.sseError <- errors.New("Could not connect to streaming")
+		return
 	}
 
 	l.sseReady <- struct{}{}
@@ -128,12 +134,13 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
 			shouldKeepRunning = false
-			break
+			return
 		default:
 			event, err := l.readEvent(reader)
 			if err != nil {
-				l.logger.Error(err)
+				l.sseError <- err
 				l.Shutdown()
+				return
 			}
 
 			if event != nil {
@@ -147,5 +154,4 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 	}
 	l.logger.Info("SSE streaming exiting")
 	activeGoroutines.Wait()
-	return nil
 }
