@@ -11,7 +11,7 @@ import (
 
 func TestSSEError(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
-	clientErr, err := NewSSEClient("", make(chan int), logger)
+	clientErr, err := NewSSEClient("", make(chan int), make(chan struct{}), logger)
 	if clientErr != nil {
 		t.Error("It should be nil")
 	}
@@ -20,7 +20,7 @@ func TestSSEError(t *testing.T) {
 	}
 
 	status := make(chan int, 1)
-	client, _ := NewSSEClient("", status, logger)
+	client, _ := NewSSEClient("", status, make(chan struct{}, 1), logger)
 	client.Do(make(map[string]string), func(e map[string]interface{}) { t.Error("It should not execute anything") })
 
 	stats := <-status
@@ -139,5 +139,53 @@ func TestSSEKeepAlive(t *testing.T) {
 
 	if result["event"] != "keepalive" {
 		t.Error("Unexpected result")
+	}
+}
+
+func TestStopBlock(t *testing.T) {
+	logger := logging.NewLogger(&logging.LoggerOptions{})
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		flusher, err := w.(http.Flusher)
+		if !err {
+			t.Error("Unexpected error")
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+
+		fmt.Fprintf(w, ":keepalive")
+		flusher.Flush()
+	}))
+	defer ts.Close()
+
+	status := make(chan int, 1)
+	stopped := make(chan struct{}, 1)
+	mockedClient := SSEClient{
+		client:   http.Client{},
+		logger:   logger,
+		stopped:  stopped,
+		shutdown: make(chan struct{}, 1),
+		url:      ts.URL,
+		status:   status,
+	}
+
+	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
+	})
+
+	ready := <-status
+	if ready != OK {
+		t.Error("It should send ready flag")
+	}
+
+	go func() {
+		mockedClient.Shutdown()
+	}()
+
+	msg := <-stopped
+
+	if msg != struct{}{} {
+		t.Error("It should receive stop")
 	}
 }

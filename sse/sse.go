@@ -41,15 +41,18 @@ type SSEClient struct {
 }
 
 // NewSSEClient creates new SSEClient
-func NewSSEClient(url string, status chan int, logger logging.LoggerInterface) (*SSEClient, error) {
+func NewSSEClient(url string, status chan int, stopped chan struct{}, logger logging.LoggerInterface) (*SSEClient, error) {
 	if cap(status) < 1 {
 		return nil, errors.New("Status channel should have length")
+	}
+	if cap(stopped) < 1 {
+		return nil, errors.New("Stopped channel should have length")
 	}
 	return &SSEClient{
 		url:      url,
 		client:   http.Client{},
 		status:   status,
-		stopped:  make(chan struct{}, 1),
+		stopped:  stopped,
 		shutdown: make(chan struct{}, 1),
 		logger:   logger,
 	}, nil
