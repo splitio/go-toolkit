@@ -13,6 +13,19 @@ import (
 	"github.com/splitio/go-toolkit/logging"
 )
 
+const (
+	// OK It could connect streaming
+	OK = iota
+	// ErrorOnClientCreation Could not create client
+	ErrorOnClientCreation
+	// ErrorRequestPerformed Could not perform request
+	ErrorRequestPerformed
+	// ErrorConnectToStreaming Could not connect to streaming
+	ErrorConnectToStreaming
+	// ErrorReadingStream Error in streaming
+	ErrorReadingStream
+)
+
 var sseDelimiter [2]byte = [...]byte{':', ' '}
 var sseData [4]byte = [...]byte{'d', 'a', 't', 'a'}
 var sseKeepAlive [10]byte = [...]byte{':', 'k', 'e', 'e', 'p', 'a', 'l', 'i', 'v', 'e'}
@@ -21,22 +34,28 @@ var sseKeepAlive [10]byte = [...]byte{':', 'k', 'e', 'e', 'p', 'a', 'l', 'i', 'v
 type SSEClient struct {
 	url      string
 	client   http.Client
-	sseReady chan struct{}
+	status   chan int
+	stopped  chan struct{}
 	shutdown chan struct{}
-	mainWG   sync.WaitGroup
 	logger   logging.LoggerInterface
 }
 
 // NewSSEClient creates new SSEClient
-func NewSSEClient(url string, ready chan struct{}, logger logging.LoggerInterface) *SSEClient {
+func NewSSEClient(url string, status chan int, stopped chan struct{}, logger logging.LoggerInterface) (*SSEClient, error) {
+	if cap(status) < 1 {
+		return nil, errors.New("Status channel should have length")
+	}
+	if cap(stopped) < 1 {
+		return nil, errors.New("Stopped channel should have length")
+	}
 	return &SSEClient{
 		url:      url,
 		client:   http.Client{},
-		sseReady: ready,
+		status:   status,
+		stopped:  stopped,
 		shutdown: make(chan struct{}, 1),
-		mainWG:   sync.WaitGroup{},
 		logger:   logger,
-	}
+	}, nil
 }
 
 // Shutdown stops SSE
@@ -46,7 +65,7 @@ func (l *SSEClient) Shutdown() {
 	default:
 		l.logger.Error("Awaited unexpected event")
 	}
-	l.mainWG.Wait()
+	<-l.stopped
 }
 
 func parseData(raw []byte) (map[string]interface{}, error) {
@@ -60,6 +79,7 @@ func parseData(raw []byte) (map[string]interface{}, error) {
 
 func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, error) {
 	line, err := reader.ReadBytes('\n')
+	l.logger.Info("LINE:", string(line))
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
@@ -91,13 +111,14 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 }
 
 // Do starts streaming
-func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) error {
-	l.mainWG.Add(1)
-	defer l.mainWG.Done()
+func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) {
+	defer func() { l.stopped <- struct{}{} }()
 
 	req, err := http.NewRequest("GET", l.url, nil)
 	if err != nil {
-		return errors.New("Could not create client")
+		l.logger.Error(err)
+		l.status <- ErrorOnClientCreation
+		return
 	}
 
 	query := req.URL.Query()
@@ -110,13 +131,16 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 
 	resp, err := l.client.Do(req)
 	if err != nil {
-		return errors.New("Could not perform request")
+		l.logger.Error(err)
+		l.status <- ErrorRequestPerformed
+		return
 	}
 	if resp.StatusCode != 200 {
-		return errors.New("Could not connect to streaming")
+		l.status <- ErrorConnectToStreaming
+		return
 	}
 
-	l.sseReady <- struct{}{}
+	l.status <- OK
 	reader := bufio.NewReader(resp.Body)
 	defer resp.Body.Close()
 
@@ -128,24 +152,23 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
 			shouldKeepRunning = false
-			break
 		default:
 			event, err := l.readEvent(reader)
 			if err != nil {
-				l.logger.Error(err)
+				l.status <- ErrorReadingStream
 				l.Shutdown()
+				return
 			}
 
 			if event != nil {
 				activeGoroutines.Add(1)
 				go func() {
+					defer activeGoroutines.Done()
 					callback(event)
-					activeGoroutines.Done()
 				}()
 			}
 		}
 	}
 	l.logger.Info("SSE streaming exiting")
 	activeGoroutines.Wait()
-	return nil
 }
