@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/splitio/go-toolkit/logging"
 )
@@ -91,6 +92,7 @@ func TestSSE(t *testing.T) {
 	}
 
 	mockedClient.Shutdown()
+	time.Sleep(400 * time.Millisecond)
 
 	if result["data"] != "some" {
 		t.Error("Unexpected result")
@@ -136,6 +138,7 @@ func TestSSEKeepAlive(t *testing.T) {
 	}
 
 	mockedClient.Shutdown()
+	time.Sleep(400 * time.Millisecond)
 
 	if result["event"] != "keepalive" {
 		t.Error("Unexpected result")
