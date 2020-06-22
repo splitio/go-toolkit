@@ -92,7 +92,7 @@ func TestSSE(t *testing.T) {
 	}
 
 	mockedClient.Shutdown()
-	time.Sleep(400 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 
 	if result["data"] != "some" {
 		t.Error("Unexpected result")
@@ -138,7 +138,7 @@ func TestSSEKeepAlive(t *testing.T) {
 	}
 
 	mockedClient.Shutdown()
-	time.Sleep(400 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 
 	if result["event"] != "keepalive" {
 		t.Error("Unexpected result")
