@@ -79,7 +79,6 @@ func parseData(raw []byte) (map[string]interface{}, error) {
 
 func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, error) {
 	line, err := reader.ReadBytes('\n')
-	l.logger.Info("LINE:", string(line))
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
@@ -87,6 +86,7 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 	if len(line) < 2 {
 		return nil, nil
 	}
+	l.logger.Info("LINE:", string(line))
 
 	splitted := bytes.Split(line, sseDelimiter[:])
 
