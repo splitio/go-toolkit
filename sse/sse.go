@@ -3,11 +3,13 @@ package sse
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -115,15 +117,23 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 
 // Do starts streaming
 func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) {
-	defer func() { l.stopped <- struct{}{} }()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		cancel()
+		l.stopped <- struct{}{}
+	}()
 
 	req, err := http.NewRequest("GET", l.url, nil)
 	if err != nil {
 		l.logger.Error(err)
+		if strings.HasSuffix(err.Error(), context.Canceled.Error()) {
+			l.status <- ErrorKeepAlive
+			return
+		}
 		l.status <- ErrorOnClientCreation
 		return
 	}
-
+	req = req.WithContext(ctx)
 	query := req.URL.Query()
 
 	for key, value := range params {
@@ -172,6 +182,7 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		select {
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
+			cancel()
 			l.mutex.Lock()
 			shouldRun = false
 			l.mutex.Unlock()
