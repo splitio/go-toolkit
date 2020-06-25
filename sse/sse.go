@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/splitio/go-toolkit/logging"
 )
@@ -24,6 +25,8 @@ const (
 	ErrorConnectToStreaming
 	// ErrorReadingStream Error in streaming
 	ErrorReadingStream
+	// ErrorKeepAlive timedout
+	ErrorKeepAlive
 )
 
 var sseDelimiter [2]byte = [...]byte{':', ' '}
@@ -32,29 +35,36 @@ var sseKeepAlive [10]byte = [...]byte{':', 'k', 'e', 'e', 'p', 'a', 'l', 'i', 'v
 
 // SSEClient struct
 type SSEClient struct {
-	url      string
-	client   http.Client
-	status   chan int
-	stopped  chan struct{}
-	shutdown chan struct{}
-	logger   logging.LoggerInterface
+	url       string
+	client    http.Client
+	status    chan int
+	stopped   chan struct{}
+	keepAlive chan struct{}
+	shutdown  chan struct{}
+	timeout   int
+	logger    logging.LoggerInterface
 }
 
 // NewSSEClient creates new SSEClient
-func NewSSEClient(url string, status chan int, stopped chan struct{}, logger logging.LoggerInterface) (*SSEClient, error) {
+func NewSSEClient(url string, status chan int, stopped chan struct{}, timeout int, logger logging.LoggerInterface) (*SSEClient, error) {
 	if cap(status) < 1 {
 		return nil, errors.New("Status channel should have length")
 	}
 	if cap(stopped) < 1 {
 		return nil, errors.New("Stopped channel should have length")
 	}
+	if timeout < 1 {
+		return nil, errors.New("Timeout should be higher than 0")
+	}
 	return &SSEClient{
-		url:      url,
-		client:   http.Client{},
-		status:   status,
-		stopped:  stopped,
-		shutdown: make(chan struct{}, 1),
-		logger:   logger,
+		url:       url,
+		client:    http.Client{},
+		status:    status,
+		stopped:   stopped,
+		keepAlive: make(chan struct{}, 1),
+		shutdown:  make(chan struct{}, 1),
+		timeout:   timeout,
+		logger:    logger,
 	}, nil
 }
 
@@ -65,7 +75,6 @@ func (l *SSEClient) Shutdown() {
 	default:
 		l.logger.Error("Awaited unexpected event")
 	}
-	<-l.stopped
 }
 
 func parseData(raw []byte) (map[string]interface{}, error) {
@@ -90,13 +99,8 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 
 	splitted := bytes.Split(line, sseDelimiter[:])
 
-	if bytes.Contains(splitted[0], sseKeepAlive[:]) {
-		data := make(map[string]interface{})
-		data["event"] = string(sseKeepAlive[1:])
-		return data, nil
-	}
-
 	if bytes.Compare(splitted[0], sseData[:]) != 0 {
+		l.keepAlive <- struct{}{}
 		return nil, nil
 	}
 
@@ -144,22 +148,39 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 	reader := bufio.NewReader(resp.Body)
 	defer resp.Body.Close()
 
-	shouldKeepRunning := true
 	activeGoroutines := sync.WaitGroup{}
 
+	eventChannel := make(chan map[string]interface{}, 1)
+	shouldRun := true
+	go func() {
+		defer activeGoroutines.Done()
+		activeGoroutines.Add(1)
+		for shouldRun {
+			event, err := l.readEvent(reader)
+			if err != nil {
+				l.logger.Error(err)
+				close(eventChannel)
+				return
+			}
+			eventChannel <- event
+		}
+	}()
+
+	shouldKeepRunning := true
 	for shouldKeepRunning {
 		select {
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
+			shouldRun = false
 			shouldKeepRunning = false
-		default:
-			event, err := l.readEvent(reader)
-			if err != nil {
+			return
+		case <-l.keepAlive:
+			l.logger.Info("Received keepAlive event")
+		case event, ok := <-eventChannel:
+			if !ok {
 				l.status <- ErrorReadingStream
 				l.Shutdown()
-				return
 			}
-
 			if event != nil {
 				activeGoroutines.Add(1)
 				go func() {
@@ -167,6 +188,9 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 					callback(event)
 				}()
 			}
+		case <-time.After(time.Duration(l.timeout) * time.Second):
+			l.status <- ErrorKeepAlive
+			l.Shutdown()
 		}
 	}
 	l.logger.Info("SSE streaming exiting")
