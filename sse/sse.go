@@ -43,6 +43,7 @@ type SSEClient struct {
 	shutdown  chan struct{}
 	timeout   int
 	logger    logging.LoggerInterface
+	mutex     *sync.RWMutex
 }
 
 // NewSSEClient creates new SSEClient
@@ -65,6 +66,7 @@ func NewSSEClient(url string, status chan int, stopped chan struct{}, timeout in
 		shutdown:  make(chan struct{}, 1),
 		timeout:   timeout,
 		logger:    logger,
+		mutex:     &sync.RWMutex{},
 	}, nil
 }
 
@@ -154,7 +156,9 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 	shouldRun := true
 	go func() {
 		defer activeGoroutines.Done()
+		defer l.mutex.RUnlock()
 		activeGoroutines.Add(1)
+		l.mutex.RLock()
 		for shouldRun {
 			event, err := l.readEvent(reader)
 			if err != nil {
@@ -171,7 +175,9 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		select {
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
+			l.mutex.Lock()
 			shouldRun = false
+			l.mutex.Unlock()
 			shouldKeepRunning = false
 			return
 		case <-l.keepAlive:

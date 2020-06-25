@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -42,6 +43,7 @@ func TestSSEError(t *testing.T) {
 		keepAlive: make(chan struct{}, 1),
 		shutdown:  make(chan struct{}, 1),
 		logger:    logger,
+		mutex:     &sync.RWMutex{},
 	}
 
 	mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
@@ -82,11 +84,15 @@ func TestSSE(t *testing.T) {
 		shutdown:  make(chan struct{}, 1),
 		timeout:   30,
 		logger:    logger,
+		mutex:     &sync.RWMutex{},
 	}
 
 	var result map[string]interface{}
+	mutextTest := sync.RWMutex{}
 	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
+		mutextTest.Lock()
 		result = e
+		mutextTest.Unlock()
 	})
 
 	ready := <-status
@@ -94,13 +100,15 @@ func TestSSE(t *testing.T) {
 		t.Error("It should send ready flag")
 	}
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(900 * time.Millisecond)
 	mockedClient.Shutdown()
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(900 * time.Millisecond)
 
+	mutextTest.RLock()
 	if result["data"] != "some" {
 		t.Error("Unexpected result")
 	}
+	mutextTest.RUnlock()
 }
 
 func TestStopBlock(t *testing.T) {
@@ -132,6 +140,7 @@ func TestStopBlock(t *testing.T) {
 		timeout:   30,
 		url:       ts.URL,
 		status:    status,
+		mutex:     &sync.RWMutex{},
 	}
 
 	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
@@ -142,13 +151,19 @@ func TestStopBlock(t *testing.T) {
 		t.Error("It should send ready flag")
 	}
 
+	var msg struct{}
+	mutextTest := sync.RWMutex{}
 	go func() {
-		mockedClient.Shutdown()
+		defer mutextTest.Unlock()
+		mutextTest.Lock()
+		msg = <-stopped
 	}()
 
-	msg := <-stopped
+	mockedClient.Shutdown()
 
+	mutextTest.RLock()
 	if msg != struct{}{} {
 		t.Error("It should receive stop")
 	}
+	mutextTest.RUnlock()
 }
