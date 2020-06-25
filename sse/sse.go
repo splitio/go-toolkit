@@ -35,15 +35,14 @@ var sseKeepAlive [10]byte = [...]byte{':', 'k', 'e', 'e', 'p', 'a', 'l', 'i', 'v
 
 // SSEClient struct
 type SSEClient struct {
-	url       string
-	client    http.Client
-	status    chan int
-	stopped   chan struct{}
-	keepAlive chan struct{}
-	shutdown  chan struct{}
-	timeout   int
-	logger    logging.LoggerInterface
-	mutex     *sync.RWMutex
+	url      string
+	client   http.Client
+	status   chan int
+	stopped  chan struct{}
+	shutdown chan struct{}
+	timeout  int
+	logger   logging.LoggerInterface
+	mutex    *sync.RWMutex
 }
 
 // NewSSEClient creates new SSEClient
@@ -58,15 +57,14 @@ func NewSSEClient(url string, status chan int, stopped chan struct{}, timeout in
 		return nil, errors.New("Timeout should be higher than 0")
 	}
 	return &SSEClient{
-		url:       url,
-		client:    http.Client{},
-		status:    status,
-		stopped:   stopped,
-		keepAlive: make(chan struct{}, 1),
-		shutdown:  make(chan struct{}, 1),
-		timeout:   timeout,
-		logger:    logger,
-		mutex:     &sync.RWMutex{},
+		url:      url,
+		client:   http.Client{},
+		status:   status,
+		stopped:  stopped,
+		shutdown: make(chan struct{}, 1),
+		timeout:  timeout,
+		logger:   logger,
+		mutex:    &sync.RWMutex{},
 	}, nil
 }
 
@@ -102,7 +100,6 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 	splitted := bytes.Split(line, sseDelimiter[:])
 
 	if bytes.Compare(splitted[0], sseData[:]) != 0 {
-		l.keepAlive <- struct{}{}
 		return nil, nil
 	}
 
@@ -180,8 +177,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 			l.mutex.Unlock()
 			shouldKeepRunning = false
 			return
-		case <-l.keepAlive:
-			l.logger.Info("Received keepAlive event")
 		case event, ok := <-eventChannel:
 			if !ok {
 				l.status <- ErrorReadingStream
