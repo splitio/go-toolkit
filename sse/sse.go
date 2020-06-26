@@ -29,6 +29,8 @@ const (
 	ErrorReadingStream
 	// ErrorKeepAlive timedout
 	ErrorKeepAlive
+	// ErrorUnexpected unexpected error occures
+	ErrorUnexpected
 )
 
 var sseDelimiter [2]byte = [...]byte{':', ' '}
