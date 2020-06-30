@@ -2,6 +2,7 @@ package asynctask
 
 import (
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -21,6 +22,7 @@ type AsyncTask struct {
 	logger     logging.LoggerInterface
 	finished   bool
 	finishChan chan struct{}
+	mutex      sync.RWMutex
 }
 
 const (
@@ -37,6 +39,18 @@ func (t *AsyncTask) _running() bool {
 	return res
 }
 
+func (t *AsyncTask) isFinished() bool {
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+	return t.finished
+}
+
+func (t *AsyncTask) updateStatus(status bool) {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+	t.finished = status
+}
+
 // Start initiates the task. It wraps the execution in a closure guarded by a call to recover() in order
 // to prevent the main application from crashin if something goes wrong while the sdk interacts with the backend.
 func (t *AsyncTask) Start() {
@@ -51,7 +65,7 @@ func (t *AsyncTask) Start() {
 
 	go func() {
 		defer func() {
-			t.finished = true
+			t.updateStatus(true)
 			t.finishChan <- struct{}{}
 		}()
 		defer func() {
@@ -120,7 +134,7 @@ func (t *AsyncTask) sendSignal(signal int) error {
 // Stop executes onStop hook if any, blocks until its done (if blocking = true) and prevents future executions of the task.
 func (t *AsyncTask) Stop(blocking bool) error {
 
-	if t.finished {
+	if t.isFinished() {
 		// Task already stopped
 		return nil
 	}
@@ -165,6 +179,7 @@ func NewAsyncTask(
 		incoming:   make(chan int, 10),
 		finishChan: make(chan struct{}, 1),
 		finished:   false,
+		mutex:      sync.RWMutex{},
 	}
 	t.running.Store(false)
 	return &t
