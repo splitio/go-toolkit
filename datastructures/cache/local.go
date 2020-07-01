@@ -75,6 +75,7 @@ func (c *LocalCacheImpl) Set(key string, value interface{}) error {
 			}
 			key := entry.key
 			delete(c.items, key)
+			delete(c.ttls, key)
 			c.lru.Remove(c.lru.Back())
 		}
 
