@@ -42,7 +42,6 @@ func TestSSEError(t *testing.T) {
 		stopped:  make(chan struct{}, 1),
 		shutdown: make(chan struct{}, 1),
 		logger:   logger,
-		mutex:    &sync.RWMutex{},
 	}
 
 	mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
@@ -82,7 +81,6 @@ func TestSSE(t *testing.T) {
 		shutdown: make(chan struct{}, 1),
 		timeout:  30,
 		logger:   logger,
-		mutex:    &sync.RWMutex{},
 	}
 
 	var result map[string]interface{}
@@ -137,7 +135,6 @@ func TestStopBlock(t *testing.T) {
 		timeout:  30,
 		url:      ts.URL,
 		status:   status,
-		mutex:    &sync.RWMutex{},
 	}
 
 	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
