@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -12,7 +13,7 @@ import (
 
 func TestSSEError(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
-	clientErr, err := NewSSEClient("", make(chan int), make(chan struct{}), logger)
+	clientErr, err := NewSSEClient("", make(chan int), make(chan struct{}), 120, logger)
 	if clientErr != nil {
 		t.Error("It should be nil")
 	}
@@ -21,7 +22,7 @@ func TestSSEError(t *testing.T) {
 	}
 
 	status := make(chan int, 1)
-	client, _ := NewSSEClient("", status, make(chan struct{}, 1), logger)
+	client, _ := NewSSEClient("", status, make(chan struct{}, 1), 120, logger)
 	client.Do(make(map[string]string), func(e map[string]interface{}) { t.Error("It should not execute anything") })
 
 	stats := <-status
@@ -35,11 +36,11 @@ func TestSSEError(t *testing.T) {
 	defer ts.Close()
 
 	mockedClient := SSEClient{
+		url:      ts.URL,
 		client:   http.Client{},
 		status:   status,
 		stopped:  make(chan struct{}, 1),
 		shutdown: make(chan struct{}, 1),
-		url:      ts.URL,
 		logger:   logger,
 	}
 
@@ -73,17 +74,21 @@ func TestSSE(t *testing.T) {
 
 	status := make(chan int, 1)
 	mockedClient := SSEClient{
+		url:      ts.URL,
 		client:   http.Client{},
-		logger:   logger,
+		status:   status,
 		stopped:  make(chan struct{}, 1),
 		shutdown: make(chan struct{}, 1),
-		status:   status,
-		url:      ts.URL,
+		timeout:  30,
+		logger:   logger,
 	}
 
 	var result map[string]interface{}
+	mutextTest := sync.RWMutex{}
 	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
+		mutextTest.Lock()
 		result = e
+		mutextTest.Unlock()
 	})
 
 	ready := <-status
@@ -91,58 +96,15 @@ func TestSSE(t *testing.T) {
 		t.Error("It should send ready flag")
 	}
 
+	time.Sleep(900 * time.Millisecond)
 	mockedClient.Shutdown()
-	time.Sleep(1 * time.Second)
+	time.Sleep(900 * time.Millisecond)
 
+	mutextTest.RLock()
 	if result["data"] != "some" {
 		t.Error("Unexpected result")
 	}
-}
-
-func TestSSEKeepAlive(t *testing.T) {
-	logger := logging.NewLogger(&logging.LoggerOptions{})
-
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		flusher, err := w.(http.Flusher)
-		if !err {
-			t.Error("Unexpected error")
-			return
-		}
-
-		w.Header().Set("Content-Type", "text/event-stream")
-		w.Header().Set("Cache-Control", "no-cache")
-
-		fmt.Fprintf(w, ":keepalive")
-		flusher.Flush()
-	}))
-	defer ts.Close()
-
-	status := make(chan int, 1)
-	mockedClient := SSEClient{
-		client:   http.Client{},
-		logger:   logger,
-		stopped:  make(chan struct{}, 1),
-		shutdown: make(chan struct{}, 1),
-		url:      ts.URL,
-		status:   status,
-	}
-
-	var result map[string]interface{}
-	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
-		result = e
-	})
-
-	ready := <-status
-	if ready != OK {
-		t.Error("It should send ready flag")
-	}
-
-	mockedClient.Shutdown()
-	time.Sleep(1 * time.Second)
-
-	if result["event"] != "keepalive" {
-		t.Error("Unexpected result")
-	}
+	mutextTest.RUnlock()
 }
 
 func TestStopBlock(t *testing.T) {
@@ -170,6 +132,7 @@ func TestStopBlock(t *testing.T) {
 		logger:   logger,
 		stopped:  stopped,
 		shutdown: make(chan struct{}, 1),
+		timeout:  30,
 		url:      ts.URL,
 		status:   status,
 	}
@@ -182,13 +145,19 @@ func TestStopBlock(t *testing.T) {
 		t.Error("It should send ready flag")
 	}
 
+	var msg struct{}
+	mutextTest := sync.RWMutex{}
 	go func() {
-		mockedClient.Shutdown()
+		defer mutextTest.Unlock()
+		mutextTest.Lock()
+		msg = <-stopped
 	}()
 
-	msg := <-stopped
+	mockedClient.Shutdown()
 
+	mutextTest.RLock()
 	if msg != struct{}{} {
 		t.Error("It should receive stop")
 	}
+	mutextTest.RUnlock()
 }
