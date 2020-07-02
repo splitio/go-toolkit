@@ -39,3 +39,27 @@ func StringRefOrNil(str string) *string {
 	}
 	return StringRef(str)
 }
+
+func AsInt64OrNil(data interface{}) *int64 {
+	if data == nil {
+		return nil
+	}
+
+	number, ok := data.(int64)
+	if !ok {
+		return nil
+	}
+	return Int64Ref(number)
+}
+
+func AsStringOrNil(data interface{}) *string {
+	if data == nil {
+		return nil
+	}
+
+	str, ok := data.(string)
+	if !ok {
+		return nil
+	}
+	return StringRef(str)
+}
