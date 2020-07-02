@@ -119,8 +119,10 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 // Do starts streaming
 func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) {
 	ctx, cancel := context.WithCancel(context.Background())
+	shouldRun := atomic.Value{}
 	defer func() {
 		cancel()
+		shouldRun.Store(false)
 		l.stopped <- struct{}{}
 	}()
 
@@ -161,7 +163,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 	activeGoroutines := sync.WaitGroup{}
 
 	eventChannel := make(chan map[string]interface{}, 1000)
-	shouldRun := atomic.Value{}
 	shouldRun.Store(true)
 	activeGoroutines.Add(1)
 	go func() {
@@ -182,8 +183,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		select {
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
-			cancel()
-			shouldRun.Store(false)
 			shouldKeepRunning = false
 			return
 		case event, ok := <-eventChannel:
