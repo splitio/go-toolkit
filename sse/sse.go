@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -166,9 +165,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 			event, err := l.readEvent(reader)
 			if err != nil {
 				l.logger.Error(err)
-				if strings.HasSuffix(err.Error(), context.Canceled.Error()) {
-					l.status <- ErrorKeepAlive
-				}
 				close(eventChannel)
 				return
 			}
