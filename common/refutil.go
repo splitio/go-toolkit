@@ -40,6 +40,18 @@ func StringRefOrNil(str string) *string {
 	return StringRef(str)
 }
 
+func AsIntOrNil(data interface{}) *int {
+	if data == nil {
+		return nil
+	}
+
+	number, ok := data.(int)
+	if !ok {
+		return nil
+	}
+	return IntRef(number)
+}
+
 func AsInt64OrNil(data interface{}) *int64 {
 	if data == nil {
 		return nil
