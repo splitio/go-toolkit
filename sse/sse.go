@@ -132,10 +132,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 	req, err := http.NewRequest("GET", l.url, nil)
 	if err != nil {
 		l.logger.Error(err)
-		if strings.HasSuffix(err.Error(), context.Canceled.Error()) {
-			l.status <- ErrorKeepAlive
-			return
-		}
 		l.status <- ErrorOnClientCreation
 		return
 	}
@@ -170,6 +166,9 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 			event, err := l.readEvent(reader)
 			if err != nil {
 				l.logger.Error(err)
+				if strings.HasSuffix(err.Error(), context.Canceled.Error()) {
+					l.status <- ErrorKeepAlive
+				}
 				close(eventChannel)
 				return
 			}
