@@ -19,7 +19,7 @@ type AsyncTask struct {
 	onInit     func(l logging.LoggerInterface) error
 	onStop     func(l logging.LoggerInterface)
 	logger     logging.LoggerInterface
-	finished   bool
+	finished   atomic.Value
 	finishChan chan struct{}
 }
 
@@ -51,7 +51,7 @@ func (t *AsyncTask) Start() {
 
 	go func() {
 		defer func() {
-			t.finished = true
+			t.finished.Store(true)
 			t.finishChan <- struct{}{}
 		}()
 		defer func() {
@@ -120,7 +120,7 @@ func (t *AsyncTask) sendSignal(signal int) error {
 // Stop executes onStop hook if any, blocks until its done (if blocking = true) and prevents future executions of the task.
 func (t *AsyncTask) Stop(blocking bool) error {
 
-	if t.finished {
+	if t.finished.Load().(bool) {
 		// Task already stopped
 		return nil
 	}
@@ -164,8 +164,8 @@ func NewAsyncTask(
 		logger:     logger,
 		incoming:   make(chan int, 10),
 		finishChan: make(chan struct{}, 1),
-		finished:   false,
 	}
 	t.running.Store(false)
+	t.finished.Store(false)
 	return &t
 }
