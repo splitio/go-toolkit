@@ -89,6 +89,17 @@ func TestAsInt64OrNil(t *testing.T) {
 	}
 }
 
+func TestAsFloat64OrNil(t *testing.T) {
+	a := AsFloat64OrNil(float64(123456789))
+	if a == nil {
+		t.Error("Wrong int reference")
+	}
+	b := AsFloat64OrNil("some")
+	if b != nil {
+		t.Error("It should be nil")
+	}
+}
+
 func TestAsStringOrNil(t *testing.T) {
 	a := AsStringOrNil("some")
 	if a == nil {

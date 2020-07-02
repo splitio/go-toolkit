@@ -12,6 +12,10 @@ func Int64Ref(number int64) *int64 {
 	return &number
 }
 
+func Float64Ref(number float64) *float64 {
+	return &number
+}
+
 func Int64Value(number *int64) int64 {
 	if number == nil {
 		return 0
@@ -62,6 +66,18 @@ func AsInt64OrNil(data interface{}) *int64 {
 		return nil
 	}
 	return Int64Ref(number)
+}
+
+func AsFloat64OrNil(data interface{}) *float64 {
+	if data == nil {
+		return nil
+	}
+
+	number, ok := data.(float64)
+	if !ok {
+		return nil
+	}
+	return Float64Ref(number)
 }
 
 func AsStringOrNil(data interface{}) *string {
