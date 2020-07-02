@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/splitio/go-toolkit/logging"
@@ -46,7 +47,6 @@ type SSEClient struct {
 	shutdown chan struct{}
 	timeout  int
 	logger   logging.LoggerInterface
-	mutex    *sync.RWMutex
 }
 
 // NewSSEClient creates new SSEClient
@@ -68,7 +68,6 @@ func NewSSEClient(url string, status chan int, stopped chan struct{}, timeout in
 		shutdown: make(chan struct{}, 1),
 		timeout:  timeout,
 		logger:   logger,
-		mutex:    &sync.RWMutex{},
 	}, nil
 }
 
@@ -99,7 +98,7 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 	if len(line) < 2 {
 		return nil, nil
 	}
-	l.logger.Info("LINE:", string(line))
+	l.logger.Debug("LINE:", string(line))
 
 	splitted := bytes.Split(line, sseDelimiter[:])
 
@@ -161,14 +160,13 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 
 	activeGoroutines := sync.WaitGroup{}
 
-	eventChannel := make(chan map[string]interface{}, 1)
-	shouldRun := true
+	eventChannel := make(chan map[string]interface{}, 1000)
+	shouldRun := atomic.Value{}
+	shouldRun.Store(true)
+	activeGoroutines.Add(1)
 	go func() {
 		defer activeGoroutines.Done()
-		defer l.mutex.RUnlock()
-		activeGoroutines.Add(1)
-		l.mutex.RLock()
-		for shouldRun {
+		for shouldRun.Load().(bool) {
 			event, err := l.readEvent(reader)
 			if err != nil {
 				l.logger.Error(err)
@@ -185,9 +183,7 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
 			cancel()
-			l.mutex.Lock()
-			shouldRun = false
-			l.mutex.Unlock()
+			shouldRun.Store(false)
 			shouldKeepRunning = false
 			return
 		case event, ok := <-eventChannel:
