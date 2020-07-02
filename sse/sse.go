@@ -120,9 +120,12 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shouldRun := atomic.Value{}
+	activeGoroutines := sync.WaitGroup{}
 	defer func() {
+		l.logger.Info("SSE streaming exiting")
 		cancel()
 		shouldRun.Store(false)
+		activeGoroutines.Wait()
 		l.stopped <- struct{}{}
 	}()
 
@@ -160,8 +163,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 	reader := bufio.NewReader(resp.Body)
 	defer resp.Body.Close()
 
-	activeGoroutines := sync.WaitGroup{}
-
 	eventChannel := make(chan map[string]interface{}, 1000)
 	shouldRun.Store(true)
 	activeGoroutines.Add(1)
@@ -178,12 +179,10 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		}
 	}()
 
-	shouldKeepRunning := true
-	for shouldKeepRunning {
+	for {
 		select {
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
-			shouldKeepRunning = false
 			return
 		case event, ok := <-eventChannel:
 			if !ok {
@@ -202,6 +201,4 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 			l.Shutdown()
 		}
 	}
-	l.logger.Info("SSE streaming exiting")
-	activeGoroutines.Wait()
 }
