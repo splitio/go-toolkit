@@ -165,9 +165,7 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 
 	eventChannel := make(chan map[string]interface{}, 1000)
 	shouldRun.Store(true)
-	activeGoroutines.Add(1)
 	go func() {
-		defer activeGoroutines.Done()
 		for shouldRun.Load().(bool) {
 			event, err := l.readEvent(reader)
 			if err != nil {
@@ -187,7 +185,7 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		case event, ok := <-eventChannel:
 			if !ok {
 				l.status <- ErrorReadingStream
-				l.Shutdown()
+				return
 			}
 			if event != nil {
 				activeGoroutines.Add(1)
@@ -198,7 +196,7 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 			}
 		case <-time.After(time.Duration(l.timeout) * time.Second):
 			l.status <- ErrorKeepAlive
-			l.Shutdown()
+			return
 		}
 	}
 }
