@@ -3,7 +3,6 @@ package backoff
 import (
 	"fmt"
 	"math"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -14,14 +13,13 @@ import (
 type BackOff struct {
 	perform    func(l logging.LoggerInterface) (bool, error)
 	name       string
-	running    atomic.Value
 	incoming   chan int
+	finishChan chan struct{}
 	period     int
 	retry      atomic.Value
+	running    atomic.Value
+	finished   atomic.Value
 	logger     logging.LoggerInterface
-	finished   bool
-	finishChan chan struct{}
-	mutex      sync.RWMutex
 }
 
 const (
@@ -37,18 +35,6 @@ func (t *BackOff) _running() bool {
 	return res
 }
 
-func (t *BackOff) isFinished() bool {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
-	return t.finished
-}
-
-func (t *BackOff) updateStatus(status bool) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-	t.finished = status
-}
-
 // Start initiates the backoff.
 func (t *BackOff) Start() {
 	if t._running() {
@@ -61,7 +47,7 @@ func (t *BackOff) Start() {
 
 	go func() {
 		defer func() {
-			t.updateStatus(true)
+			t.finished.Store(true)
 			t.finishChan <- struct{}{}
 		}()
 
@@ -105,7 +91,7 @@ func (t *BackOff) sendSignal(signal int) error {
 
 // Stop executes onStop hook if any, blocks until its done (if blocking = true) and prevents future executions of the backoff.
 func (t *BackOff) Stop(blocking bool) error {
-	if t.isFinished() {
+	if t.finished.Load().(bool) {
 		// BackOff already stopped
 		return nil
 	}
@@ -140,10 +126,9 @@ func NewBackOff(
 		logger:     logger,
 		incoming:   make(chan int, 10),
 		finishChan: make(chan struct{}, 1),
-		finished:   false,
-		mutex:      sync.RWMutex{},
 	}
 	t.retry.Store(0)
 	t.running.Store(false)
+	t.finished.Store(false)
 	return &t
 }
