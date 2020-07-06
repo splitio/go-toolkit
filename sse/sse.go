@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/splitio/go-toolkit/logging"
@@ -46,7 +46,6 @@ type SSEClient struct {
 	shutdown chan struct{}
 	timeout  int
 	logger   logging.LoggerInterface
-	mutex    *sync.RWMutex
 }
 
 // NewSSEClient creates new SSEClient
@@ -68,7 +67,6 @@ func NewSSEClient(url string, status chan int, stopped chan struct{}, timeout in
 		shutdown: make(chan struct{}, 1),
 		timeout:  timeout,
 		logger:   logger,
-		mutex:    &sync.RWMutex{},
 	}, nil
 }
 
@@ -99,7 +97,7 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 	if len(line) < 2 {
 		return nil, nil
 	}
-	l.logger.Info("LINE:", string(line))
+	l.logger.Debug("LINE:", string(line))
 
 	splitted := bytes.Split(line, sseDelimiter[:])
 
@@ -120,18 +118,19 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 // Do starts streaming
 func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) {
 	ctx, cancel := context.WithCancel(context.Background())
+	shouldRun := atomic.Value{}
+	activeGoroutines := sync.WaitGroup{}
 	defer func() {
+		l.logger.Info("SSE streaming exiting")
 		cancel()
+		shouldRun.Store(false)
+		activeGoroutines.Wait()
 		l.stopped <- struct{}{}
 	}()
 
 	req, err := http.NewRequest("GET", l.url, nil)
 	if err != nil {
 		l.logger.Error(err)
-		if strings.HasSuffix(err.Error(), context.Canceled.Error()) {
-			l.status <- ErrorKeepAlive
-			return
-		}
 		l.status <- ErrorOnClientCreation
 		return
 	}
@@ -159,16 +158,10 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 	reader := bufio.NewReader(resp.Body)
 	defer resp.Body.Close()
 
-	activeGoroutines := sync.WaitGroup{}
-
-	eventChannel := make(chan map[string]interface{}, 1)
-	shouldRun := true
+	eventChannel := make(chan map[string]interface{}, 1000)
+	shouldRun.Store(true)
 	go func() {
-		defer activeGoroutines.Done()
-		defer l.mutex.RUnlock()
-		activeGoroutines.Add(1)
-		l.mutex.RLock()
-		for shouldRun {
+		for shouldRun.Load().(bool) {
 			event, err := l.readEvent(reader)
 			if err != nil {
 				l.logger.Error(err)
@@ -179,21 +172,15 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		}
 	}()
 
-	shouldKeepRunning := true
-	for shouldKeepRunning {
+	for {
 		select {
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
-			cancel()
-			l.mutex.Lock()
-			shouldRun = false
-			l.mutex.Unlock()
-			shouldKeepRunning = false
 			return
 		case event, ok := <-eventChannel:
 			if !ok {
 				l.status <- ErrorReadingStream
-				l.Shutdown()
+				return
 			}
 			if event != nil {
 				activeGoroutines.Add(1)
@@ -204,9 +191,7 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 			}
 		case <-time.After(time.Duration(l.timeout) * time.Second):
 			l.status <- ErrorKeepAlive
-			l.Shutdown()
+			return
 		}
 	}
-	l.logger.Info("SSE streaming exiting")
-	activeGoroutines.Wait()
 }
