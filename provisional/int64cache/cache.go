@@ -3,7 +3,6 @@ package int64cache
 import (
 	"container/list"
 	"fmt"
-	"github.com/splitio/go-toolkit/datastructures/cache"
 	"sync"
 )
 
@@ -32,7 +31,7 @@ func (c *Impl) Get(key int64) (int64, error) {
 	defer c.mutex.Unlock()
 	node, ok := c.items[key]
 	if !ok {
-		return 0, &cache.Miss{}
+		return 0, &Miss{}
 	}
 
 	entry, ok := node.Value.(entry)
@@ -80,4 +79,13 @@ func NewInt64Cache(maxSize int) (*Impl, error) {
 		lru:    new(list.List),
 		items:  make(map[int64]*list.Element, maxSize),
 	}, nil
+}
+
+// Miss is a special error indicating the key was not found in the cache
+type Miss struct {
+	Key int64
+}
+
+func (m *Miss) Error() string {
+	return fmt.Sprintf("key %d not found in cache", m.Key)
 }

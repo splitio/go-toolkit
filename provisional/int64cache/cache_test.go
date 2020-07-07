@@ -4,8 +4,6 @@ import (
 	"math/rand"
 	"sync"
 	"testing"
-
-	"github.com/splitio/go-toolkit/datastructures/cache"
 )
 
 func TestInt64Cache(t *testing.T) {
@@ -39,7 +37,7 @@ func TestInt64Cache(t *testing.T) {
 		t.Errorf("Getting value 'someKey1', should not have raised an error. Got: %s", err)
 	}
 
-	_, ok := err.(*cache.Miss)
+	_, ok := err.(*Miss)
 	if !ok {
 		t.Errorf("Error should be of type Miss. Is %T", err)
 	}
