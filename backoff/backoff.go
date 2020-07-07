@@ -11,6 +11,7 @@ import (
 
 // BackOff struct
 type BackOff struct {
+	max        float64
 	perform    func(l logging.LoggerInterface) (bool, error)
 	name       string
 	incoming   chan int
@@ -75,7 +76,7 @@ func (t *BackOff) Start() {
 				case taskMessageStop:
 					t.running.Store(false)
 				}
-			case <-time.After(time.Second * time.Duration(t.period*int(math.Pow(2, float64(t.retry.Load().(int)))))):
+			case <-time.After(time.Second * time.Duration(t.period*int(math.Min(math.Pow(2, float64(t.retry.Load().(int))), t.max)))):
 			}
 		}
 
@@ -119,9 +120,11 @@ func NewBackOff(
 	name string,
 	perform func(l logging.LoggerInterface) (bool, error),
 	period int,
+	max float64,
 	logger logging.LoggerInterface,
 ) *BackOff {
 	t := BackOff{
+		max:        max,
 		name:       name,
 		perform:    perform,
 		period:     period,
