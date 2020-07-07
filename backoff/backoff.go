@@ -55,8 +55,10 @@ func (t *BackOff) Start() {
 		for t._running() {
 			// Run the wrapped function and handle the returned error if any.
 			shouldRetry, err := t.perform(t.logger)
-			if err != nil && t.logger != nil {
-				t.logger.Error(err.Error())
+			if err != nil {
+				if t.logger != nil {
+					t.logger.Error(err.Error())
+				}
 				t.Stop(false)
 			} else {
 				if shouldRetry {
