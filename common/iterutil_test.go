@@ -80,5 +80,4 @@ func TestWithBackoff(t *testing.T) {
 	if diff > 1*time.Second {
 		t.Error("Time elapsed shuld have been LESS than 1 second. Was: ", diff)
 	}
-
 }

@@ -33,7 +33,7 @@ func WithBackoff(duration time.Duration, main func() error) func() error {
 }
 
 // WithBackoffCancelling wraps the function to add Exponential backoff
-func WithBackoffCancelling(unit time.Duration, main func() bool) func() {
+func WithBackoffCancelling(unit time.Duration, max float64, main func() bool) func() {
 	cancel := make(chan struct{})
 	go func() {
 		attempts := 0
@@ -43,7 +43,7 @@ func WithBackoffCancelling(unit time.Duration, main func() bool) func() {
 			select {
 			case <-cancel:
 				return
-			case <-time.After(time.Duration(math.Pow(2, float64(attempts))) * unit):
+			case <-time.After(time.Duration(math.Min(math.Pow(2, float64(attempts)), max)) * unit):
 				isDone = main()
 			}
 		}
