@@ -12,7 +12,7 @@ import (
 // BackOff struct
 type BackOff struct {
 	max        float64
-	perform    func(l logging.LoggerInterface) (bool, error)
+	perform    func(l logging.LoggerInterface) bool
 	name       string
 	incoming   chan int
 	finishChan chan struct{}
@@ -64,20 +64,12 @@ func (t *BackOff) Start() {
 		// Execution
 		for t._running() {
 			// Run the wrapped function and handle the returned error if any.
-			shouldRetry, err := t.perform(t.logger)
-			if err != nil {
-				if t.logger != nil {
-					t.logger.Error(err.Error())
-				}
+			shouldRetry := t.perform(t.logger)
+			if !shouldRetry {
 				t.Stop(false)
 				return
 			}
-			if shouldRetry {
-				t.retry.Store(t.retry.Load().(int) + 1)
-			} else {
-				t.Stop(false)
-				return
-			}
+			t.retry.Store(t.retry.Load().(int) + 1)
 
 			// Wait for either a timeout or an interruption (can be a stop signal)
 			select {
@@ -127,7 +119,7 @@ func (t *BackOff) IsRunning() bool {
 // NewBackOff creates new backoff task with retries
 func NewBackOff(
 	name string,
-	perform func(l logging.LoggerInterface) (bool, error),
+	perform func(l logging.LoggerInterface) bool,
 	period int,
 	max float64,
 	logger logging.LoggerInterface,

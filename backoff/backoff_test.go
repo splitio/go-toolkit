@@ -1,7 +1,6 @@
 package backoff
 
 import (
-	"errors"
 	"testing"
 	"time"
 
@@ -11,34 +10,12 @@ import (
 func TestBackOff(t *testing.T) {
 	count := 0
 	logger := logging.NewLogger(&logging.LoggerOptions{LogLevel: logging.LevelDebug})
-	perform := func(logger logging.LoggerInterface) (bool, error) {
+	perform := func(logger logging.LoggerInterface) bool {
 		if count == 2 {
-			return false, nil
+			return false
 		}
 		count++
-		return true, nil
-	}
-	backoff := NewBackOff("Test", perform, 1, 10, logger)
-	backoff.Start()
-	time.Sleep(100 * time.Millisecond)
-	if !backoff.IsRunning() {
-		t.Error("It should be running")
-	}
-	time.Sleep(7 * time.Second)
-	if backoff.IsRunning() {
-		t.Error("It should not be running")
-	}
-}
-
-func TestBackOffShouldStopOnError(t *testing.T) {
-	count := 0
-	logger := logging.NewLogger(&logging.LoggerOptions{LogLevel: logging.LevelDebug})
-	perform := func(logger logging.LoggerInterface) (bool, error) {
-		if count == 2 {
-			return false, errors.New("some")
-		}
-		count++
-		return true, nil
+		return true
 	}
 	backoff := NewBackOff("Test", perform, 1, 10, logger)
 	backoff.Start()
@@ -55,12 +32,12 @@ func TestBackOffShouldStopOnError(t *testing.T) {
 func TestBackoffMaxRetry(t *testing.T) {
 	count := 0
 	logger := logging.NewLogger(&logging.LoggerOptions{LogLevel: logging.LevelDebug})
-	perform := func(logger logging.LoggerInterface) (bool, error) {
+	perform := func(logger logging.LoggerInterface) bool {
 		if count == 2 {
-			return false, errors.New("some")
+			return false
 		}
 		count++
-		return true, nil
+		return true
 	}
 	backoff := NewBackOff("Test", perform, 1, 3, logger)
 	backoff.Start()
@@ -76,8 +53,8 @@ func TestBackoffMaxRetry(t *testing.T) {
 
 func TestBackOffShouldStop(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{LogLevel: logging.LevelDebug})
-	perform := func(logger logging.LoggerInterface) (bool, error) {
-		return true, nil
+	perform := func(logger logging.LoggerInterface) bool {
+		return true
 	}
 	backoff := NewBackOff("Test", perform, 1, 10, logger)
 	backoff.Start()
@@ -94,8 +71,8 @@ func TestBackOffShouldStop(t *testing.T) {
 
 func TestBackOffStartingAgain(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{LogLevel: logging.LevelDebug})
-	perform := func(logger logging.LoggerInterface) (bool, error) {
-		return true, nil
+	perform := func(logger logging.LoggerInterface) bool {
+		return true
 	}
 	backoff := NewBackOff("Test", perform, 1, 10, logger)
 	backoff.Start()
