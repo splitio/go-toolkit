@@ -29,6 +29,8 @@ const (
 	ErrorReadingStream
 	// ErrorKeepAlive timedout
 	ErrorKeepAlive
+	// ErrorInternal Internal error for streaming
+	ErrorInternal
 	// ErrorUnexpected unexpected error occures
 	ErrorUnexpected
 )
@@ -149,7 +151,12 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		l.status <- ErrorRequestPerformed
 		return
 	}
+
 	if resp.StatusCode != 200 {
+		if resp.StatusCode >= http.StatusInternalServerError {
+			l.status <- ErrorInternal
+			return
+		}
 		l.status <- ErrorConnectToStreaming
 		return
 	}
