@@ -38,16 +38,25 @@ func (t *BackOff) _running() bool {
 
 // Start initiates the backoff.
 func (t *BackOff) Start() {
+	if len(t.finishChan) > 0 {
+		// Discarding finished signal in case it was pending before
+		<-t.finishChan
+	}
+
 	if t._running() {
 		if t.logger != nil {
 			t.logger.Warning("BackOff %s is already running. Aborting new execution.", t.name)
 		}
 		return
 	}
+	// Reseting configurations
 	t.running.Store(true)
+	t.finished.Store(false)
+	t.retry.Store(0)
 
 	go func() {
 		defer func() {
+			t.running.Store(false)
 			t.finished.Store(true)
 			t.finishChan <- struct{}{}
 		}()
@@ -61,12 +70,13 @@ func (t *BackOff) Start() {
 					t.logger.Error(err.Error())
 				}
 				t.Stop(false)
+				return
+			}
+			if shouldRetry {
+				t.retry.Store(t.retry.Load().(int) + 1)
 			} else {
-				if shouldRetry {
-					t.retry.Store(t.retry.Load().(int) + 1)
-				} else {
-					t.Stop(false)
-				}
+				t.Stop(false)
+				return
 			}
 
 			// Wait for either a timeout or an interruption (can be a stop signal)
@@ -74,12 +84,11 @@ func (t *BackOff) Start() {
 			case msg := <-t.incoming:
 				switch msg {
 				case taskMessageStop:
-					t.running.Store(false)
+					return
 				}
 			case <-time.After(time.Second * time.Duration(t.period*int(math.Min(math.Pow(2, float64(t.retry.Load().(int))), t.max)))):
 			}
 		}
-
 	}()
 }
 
@@ -132,8 +141,6 @@ func NewBackOff(
 		incoming:   make(chan int, 10),
 		finishChan: make(chan struct{}, 1),
 	}
-	t.retry.Store(0)
 	t.running.Store(false)
-	t.finished.Store(false)
 	return &t
 }
