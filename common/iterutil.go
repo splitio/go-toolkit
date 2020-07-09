@@ -43,7 +43,7 @@ func WithBackoffCancelling(unit time.Duration, max time.Duration, main func() bo
 			select {
 			case <-cancel:
 				return
-			case <-time.After(time.Duration(math.Min(math.Pow(2, float64(attempts)), max.Seconds())) * unit):
+			case <-time.After(MinDuration(time.Duration(math.Pow(2, float64(attempts)))*unit, max)):
 				isDone = main()
 			}
 		}

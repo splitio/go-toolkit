@@ -32,9 +32,8 @@ func TestWithAttempts(t *testing.T) {
 		usedAttempts++
 		if usedAttempts != 3 {
 			return errors.New("someError")
-		} else {
-			return nil
 		}
+		return nil
 	})
 	if err != nil {
 		t.Error("Func Should have returned nil.")
