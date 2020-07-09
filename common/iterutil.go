@@ -2,6 +2,7 @@ package common
 
 import (
 	"errors"
+	"math"
 	"time"
 )
 
@@ -28,5 +29,30 @@ func WithBackoff(duration time.Duration, main func() error) func() error {
 			count = 0
 		}
 		return main()
+	}
+}
+
+// WithBackoffCancelling wraps the function to add Exponential backoff
+func WithBackoffCancelling(unit time.Duration, max time.Duration, main func() bool) func() {
+	cancel := make(chan struct{})
+	go func() {
+		attempts := 0
+		isDone := main()
+		for !isDone {
+			attempts++
+			select {
+			case <-cancel:
+				return
+			case <-time.After(MinDuration(time.Duration(math.Pow(2, float64(attempts)))*unit, max)):
+				isDone = main()
+			}
+		}
+	}()
+	return func() {
+		select {
+		case cancel <- struct{}{}:
+			return
+		default:
+		}
 	}
 }

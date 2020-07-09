@@ -1,21 +1,26 @@
 package common
 
+// StringRef returns ref
 func StringRef(str string) *string {
 	return &str
 }
 
+// IntRef returns ref
 func IntRef(number int) *int {
 	return &number
 }
 
+// Int64Ref returns ref
 func Int64Ref(number int64) *int64 {
 	return &number
 }
 
+// Float64Ref returns ref
 func Float64Ref(number float64) *float64 {
 	return &number
 }
 
+// Int64Value returns value
 func Int64Value(number *int64) int64 {
 	if number == nil {
 		return 0
@@ -23,6 +28,7 @@ func Int64Value(number *int64) int64 {
 	return *number
 }
 
+// IntRefOrNil returns ref
 func IntRefOrNil(number int) *int {
 	if number == 0 {
 		return nil
@@ -30,6 +36,7 @@ func IntRefOrNil(number int) *int {
 	return IntRef(number)
 }
 
+// Int64RefOrNil returns ref
 func Int64RefOrNil(number int64) *int64 {
 	if number == 0 {
 		return nil
@@ -37,6 +44,7 @@ func Int64RefOrNil(number int64) *int64 {
 	return Int64Ref(number)
 }
 
+// StringRefOrNil returns ref
 func StringRefOrNil(str string) *string {
 	if str == "" {
 		return nil
@@ -44,6 +52,7 @@ func StringRefOrNil(str string) *string {
 	return StringRef(str)
 }
 
+// AsIntOrNil returns ref
 func AsIntOrNil(data interface{}) *int {
 	if data == nil {
 		return nil
@@ -56,6 +65,7 @@ func AsIntOrNil(data interface{}) *int {
 	return IntRef(number)
 }
 
+// AsInt64OrNil returns ref
 func AsInt64OrNil(data interface{}) *int64 {
 	if data == nil {
 		return nil
@@ -68,6 +78,7 @@ func AsInt64OrNil(data interface{}) *int64 {
 	return Int64Ref(number)
 }
 
+// AsFloat64OrNil return ref
 func AsFloat64OrNil(data interface{}) *float64 {
 	if data == nil {
 		return nil
@@ -80,6 +91,7 @@ func AsFloat64OrNil(data interface{}) *float64 {
 	return Float64Ref(number)
 }
 
+// AsStringOrNil returns ref
 func AsStringOrNil(data interface{}) *string {
 	if data == nil {
 		return nil

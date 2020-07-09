@@ -49,7 +49,7 @@ func TestSSEError(t *testing.T) {
 	})
 
 	stats = <-status
-	if stats != ErrorConnectToStreaming {
+	if stats != ErrorInternal {
 		t.Error("Unexpected type of error")
 	}
 }
