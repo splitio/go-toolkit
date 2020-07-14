@@ -69,6 +69,10 @@ func TestLocalCache(t *testing.T) {
 		t.Error("Items size should be 5. is: ", len(cache.items))
 	}
 
+	if len(cache.ttls) != len(cache.items) {
+		t.Error("TTLs size should be the same size as items")
+	}
+
 	if cache.lru.Len() != 5 {
 		t.Error("LRU size should be 5. is: ", cache.lru.Len())
 	}
@@ -136,6 +140,5 @@ func TestLocalCacheHighConcurrency(t *testing.T) {
 			}()
 		}
 	}
-
 	wg.Wait()
 }
