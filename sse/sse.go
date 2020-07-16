@@ -119,18 +119,21 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 
 // Do starts streaming
 func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) {
+	select {
+	case <-l.stopped:
+		// Skipping previous msg
+	default:
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	shouldRun := atomic.Value{}
 	shouldRun.Store(false)
 	activeGoroutines := sync.WaitGroup{}
 	defer func() {
-		if shouldRun.Load().(bool) {
-			l.logger.Info("SSE streaming exiting")
-			cancel()
-			shouldRun.Store(false)
-			activeGoroutines.Wait()
-			l.stopped <- struct{}{}
-		}
+		l.logger.Info("SSE streaming exiting")
+		cancel()
+		shouldRun.Store(false)
+		activeGoroutines.Wait()
+		l.stopped <- struct{}{}
 	}()
 
 	req, err := http.NewRequest("GET", l.url, nil)
