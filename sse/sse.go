@@ -99,7 +99,6 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 	if len(line) < 2 {
 		return nil, nil
 	}
-	l.logger.Debug("LINE:", string(line))
 
 	splitted := bytes.Split(line, sseDelimiter[:])
 
@@ -108,6 +107,7 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 	}
 
 	raw := bytes.TrimSpace(splitted[1])
+	l.logger.Info("LINE:", string(line))
 	data, err := parseData(raw)
 	if err != nil {
 		l.logger.Error("Error parsing event: ", err)
@@ -121,13 +121,16 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) {
 	ctx, cancel := context.WithCancel(context.Background())
 	shouldRun := atomic.Value{}
+	shouldRun.Store(false)
 	activeGoroutines := sync.WaitGroup{}
 	defer func() {
-		l.logger.Info("SSE streaming exiting")
-		cancel()
-		shouldRun.Store(false)
-		activeGoroutines.Wait()
-		l.stopped <- struct{}{}
+		if shouldRun.Load().(bool) {
+			l.logger.Info("SSE streaming exiting")
+			cancel()
+			shouldRun.Store(false)
+			activeGoroutines.Wait()
+			l.stopped <- struct{}{}
+		}
 	}()
 
 	req, err := http.NewRequest("GET", l.url, nil)
@@ -187,7 +190,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		case event, ok := <-eventChannel:
 			if !ok {
 				l.status <- ErrorReadingStream
-				return
 			}
 			if event != nil {
 				activeGoroutines.Add(1)
@@ -198,7 +200,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 			}
 		case <-time.After(time.Duration(l.timeout) * time.Second):
 			l.status <- ErrorKeepAlive
-			return
 		}
 	}
 }
