@@ -107,7 +107,7 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 	}
 
 	raw := bytes.TrimSpace(splitted[1])
-	l.logger.Info("LINE:", string(line))
+	l.logger.Debug("LINE:", string(line))
 	data, err := parseData(raw)
 	if err != nil {
 		l.logger.Error("Error parsing event: ", err)
