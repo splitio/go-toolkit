@@ -41,15 +41,13 @@ var sseKeepAlive [10]byte = [...]byte{':', 'k', 'e', 'e', 'p', 'a', 'l', 'i', 'v
 
 // SSEClient struct
 type SSEClient struct {
-	url               string
-	client            http.Client
-	status            chan int
-	stopped           chan struct{}
-	shutdown          chan struct{}
-	err               chan struct{}
-	timeout           int
-	logger            logging.LoggerInterface
-	shutdownPerformed atomic.Value
+	url      string
+	client   http.Client
+	status   chan int
+	stopped  chan struct{}
+	shutdown chan struct{}
+	timeout  int
+	logger   logging.LoggerInterface
 }
 
 // NewSSEClient creates new SSEClient
@@ -63,14 +61,11 @@ func NewSSEClient(url string, status chan int, stopped chan struct{}, timeout in
 	if timeout < 1 {
 		return nil, errors.New("Timeout should be higher than 0")
 	}
-	shutdownPerformed := atomic.Value{}
-	shutdownPerformed.Store(false)
 	return &SSEClient{
 		url:      url,
 		client:   http.Client{},
 		status:   status,
 		stopped:  stopped,
-		err:      make(chan struct{}, 1),
 		shutdown: make(chan struct{}, 1),
 		timeout:  timeout,
 		logger:   logger,
@@ -112,6 +107,7 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 	}
 
 	raw := bytes.TrimSpace(splitted[1])
+	l.logger.Debug("LINE:", string(line))
 	data, err := parseData(raw)
 	if err != nil {
 		l.logger.Error("Error parsing event: ", err)
@@ -124,11 +120,15 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 // Do starts streaming
 func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) {
 	select {
+	case <-l.shutdown:
+		// Skipping previous shutdown
+	default:
+	}
+	select {
 	case <-l.stopped:
 		// Skipping previous msg
 	default:
 	}
-	l.shutdownPerformed.Store(false)
 	ctx, cancel := context.WithCancel(context.Background())
 	shouldRun := atomic.Value{}
 	shouldRun.Store(false)
@@ -184,9 +184,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 			if err != nil {
 				l.logger.Error(err)
 				close(eventChannel)
-				if !l.shutdownPerformed.Load().(bool) {
-					l.err <- struct{}{}
-				}
 				return
 			}
 			eventChannel <- event
@@ -197,21 +194,22 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		select {
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
-			l.shutdownPerformed.Store(true)
 			return
-		case <-l.err:
-			l.status <- ErrorReadingStream
-		case event := <-eventChannel:
+		case event, ok := <-eventChannel:
+			if !ok {
+				l.status <- ErrorReadingStream
+				return
+			}
 			if event != nil {
-				l.logger.Info(fmt.Sprintf("EVENT %v", event))
 				activeGoroutines.Add(1)
 				go func() {
 					defer activeGoroutines.Done()
 					callback(event)
 				}()
 			}
-		case <-time.After(time.Duration(5) * time.Second):
+		case <-time.After(time.Duration(l.timeout) * time.Second):
 			l.status <- ErrorKeepAlive
+			return
 		}
 	}
 }
