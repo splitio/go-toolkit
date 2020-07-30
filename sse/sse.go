@@ -44,19 +44,15 @@ type SSEClient struct {
 	url      string
 	client   http.Client
 	status   chan int
-	stopped  chan struct{}
 	shutdown chan struct{}
 	timeout  int
 	logger   logging.LoggerInterface
 }
 
 // NewSSEClient creates new SSEClient
-func NewSSEClient(url string, status chan int, stopped chan struct{}, timeout int, logger logging.LoggerInterface) (*SSEClient, error) {
+func NewSSEClient(url string, status chan int, timeout int, logger logging.LoggerInterface) (*SSEClient, error) {
 	if cap(status) < 1 {
 		return nil, errors.New("Status channel should have length")
-	}
-	if cap(stopped) < 1 {
-		return nil, errors.New("Stopped channel should have length")
 	}
 	if timeout < 1 {
 		return nil, errors.New("Timeout should be higher than 0")
@@ -65,7 +61,6 @@ func NewSSEClient(url string, status chan int, stopped chan struct{}, timeout in
 		url:      url,
 		client:   http.Client{},
 		status:   status,
-		stopped:  stopped,
 		shutdown: make(chan struct{}, 1),
 		timeout:  timeout,
 		logger:   logger,
@@ -117,16 +112,18 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 	return data, nil
 }
 
+func parseHttpError(resp *http.Response) int {
+	if resp.StatusCode >= http.StatusInternalServerError {
+		return ErrorInternal
+	}
+	return ErrorConnectToStreaming
+}
+
 // Do starts streaming
 func (l *SSEClient) Do(params map[string]string, callback func(e map[string]interface{})) {
 	select {
 	case <-l.shutdown:
 		// Skipping previous shutdown
-	default:
-	}
-	select {
-	case <-l.stopped:
-		// Skipping previous msg
 	default:
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -138,7 +135,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		cancel()
 		shouldRun.Store(false)
 		activeGoroutines.Wait()
-		l.stopped <- struct{}{}
 	}()
 
 	req, err := http.NewRequest("GET", l.url, nil)
@@ -164,17 +160,13 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 	}
 
 	if resp.StatusCode != 200 {
-		if resp.StatusCode >= http.StatusInternalServerError {
-			l.status <- ErrorInternal
-			return
-		}
-		l.status <- ErrorConnectToStreaming
+		l.status <- parseHttpError(resp)
 		return
 	}
+	defer resp.Body.Close()
 
 	l.status <- OK
 	reader := bufio.NewReader(resp.Body)
-	defer resp.Body.Close()
 
 	eventChannel := make(chan map[string]interface{}, 1000)
 	shouldRun.Store(true)
@@ -193,6 +185,8 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 	for {
 		select {
 		case <-l.shutdown:
+			// Response body is closed
+			//
 			l.logger.Info("Shutting down listener")
 			return
 		case event, ok := <-eventChannel:
