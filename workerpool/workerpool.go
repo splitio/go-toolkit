@@ -38,7 +38,6 @@ func (a *WorkerAdmin) workerWrapper(w Worker) {
 	a.signalsMutex.Lock()
 	a.signals[w.Name()] = make(chan int, 10)
 	a.signalsMutex.Unlock()
-	a.wg.Add(1)
 	defer a.wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
@@ -80,6 +79,7 @@ func (a *WorkerAdmin) AddWorker(w Worker) {
 		a.logger.Error("AddWorker called with nil")
 		return
 	}
+	a.wg.Add(1)
 	go a.workerWrapper(w)
 }
 
