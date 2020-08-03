@@ -120,7 +120,7 @@ func (t *AsyncTask) sendSignal(signal int) error {
 // Stop executes onStop hook if any, blocks until its done (if blocking = true) and prevents future executions of the task.
 func (t *AsyncTask) Stop(blocking bool) error {
 
-	if t.finished.Load().(bool) {
+	if !t._running() || t.finished.Load().(bool) {
 		// Task already stopped
 		return nil
 	}
