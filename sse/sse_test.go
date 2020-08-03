@@ -13,7 +13,7 @@ import (
 
 func TestSSEError(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
-	clientErr, err := NewSSEClient("", make(chan int), make(chan struct{}), 120, logger)
+	clientErr, err := NewSSEClient("", make(chan int), 120, logger)
 	if clientErr != nil {
 		t.Error("It should be nil")
 	}
@@ -22,7 +22,7 @@ func TestSSEError(t *testing.T) {
 	}
 
 	status := make(chan int, 1)
-	client, _ := NewSSEClient("", status, make(chan struct{}, 1), 120, logger)
+	client, _ := NewSSEClient("", status, 120, logger)
 	client.Do(make(map[string]string), func(e map[string]interface{}) { t.Error("It should not execute anything") })
 
 	stats := <-status
@@ -39,7 +39,6 @@ func TestSSEError(t *testing.T) {
 		url:      ts.URL,
 		client:   http.Client{},
 		status:   status,
-		stopped:  make(chan struct{}, 1),
 		shutdown: make(chan struct{}, 1),
 		logger:   logger,
 	}
@@ -77,7 +76,6 @@ func TestSSE(t *testing.T) {
 		url:      ts.URL,
 		client:   http.Client{},
 		status:   status,
-		stopped:  make(chan struct{}, 1),
 		shutdown: make(chan struct{}, 1),
 		timeout:  30,
 		logger:   logger,
@@ -126,11 +124,9 @@ func TestStopBlock(t *testing.T) {
 	defer ts.Close()
 
 	status := make(chan int, 1)
-	stopped := make(chan struct{}, 1)
 	mockedClient := SSEClient{
 		client:   http.Client{},
 		logger:   logger,
-		stopped:  stopped,
 		shutdown: make(chan struct{}, 1),
 		timeout:  30,
 		url:      ts.URL,
@@ -150,7 +146,6 @@ func TestStopBlock(t *testing.T) {
 	go func() {
 		defer mutextTest.Unlock()
 		mutextTest.Lock()
-		msg = <-stopped
 	}()
 
 	mockedClient.Shutdown()
