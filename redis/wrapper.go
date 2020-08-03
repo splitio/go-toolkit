@@ -88,6 +88,7 @@ type Client interface {
 	Ping() Result
 	Keys(pattern string) Result
 	SMembers(key string) Result
+	SIsMember(key string, member interface{}) Result
 	SAdd(key string, members ...interface{}) Result
 	SRem(key string, members ...interface{}) Result
 	Incr(key string) Result
@@ -196,6 +197,12 @@ func (c *ClientImpl) Keys(pattern string) Result {
 // SMembers implements SMembers wrapper for redis
 func (c *ClientImpl) SMembers(key string) Result {
 	res := c.wrapped.SMembers(key)
+	return c.wrapResult(res)
+}
+
+// SIsMember implements SIsMember wrapper for redis
+func (c *ClientImpl) SIsMember(key string, member interface{}) Result {
+	res := c.wrapped.SIsMember(key, member)
 	return c.wrapResult(res)
 }
 

@@ -66,26 +66,27 @@ func (m *MockResultOutput) MultiInterface() ([]interface{}, error) {
 
 // MockClient mocks for testing purposes
 type MockClient struct {
-	DelCall      func(keys ...string) redis.Result
-	GetCall      func(key string) redis.Result
-	SetCall      func(key string, value interface{}, expiration time.Duration) redis.Result
-	PingCall     func() redis.Result
-	ExistsCall   func(keys ...string) redis.Result
-	KeysCall     func(pattern string) redis.Result
-	SMembersCall func(key string) redis.Result
-	SAddCall     func(key string, members ...interface{}) redis.Result
-	SRemCall     func(key string, members ...interface{}) redis.Result
-	IncrCall     func(key string) redis.Result
-	DecrCall     func(key string) redis.Result
-	RPushCall    func(key string, values ...interface{}) redis.Result
-	LRangeCall   func(key string, start, stop int64) redis.Result
-	LTrimCall    func(key string, start, stop int64) redis.Result
-	LLenCall     func(key string) redis.Result
-	ExpireCall   func(key string, value time.Duration) redis.Result
-	TTLCall      func(key string) redis.Result
-	MGetCall     func(keys []string) redis.Result
-	SCardCall    func(key string) redis.Result
-	EvalCall     func(script string, keys []string, args ...interface{}) redis.Result
+	DelCall       func(keys ...string) redis.Result
+	GetCall       func(key string) redis.Result
+	SetCall       func(key string, value interface{}, expiration time.Duration) redis.Result
+	PingCall      func() redis.Result
+	ExistsCall    func(keys ...string) redis.Result
+	KeysCall      func(pattern string) redis.Result
+	SMembersCall  func(key string) redis.Result
+	SIsMemberCall func(key string, member interface{}) redis.Result
+	SAddCall      func(key string, members ...interface{}) redis.Result
+	SRemCall      func(key string, members ...interface{}) redis.Result
+	IncrCall      func(key string) redis.Result
+	DecrCall      func(key string) redis.Result
+	RPushCall     func(key string, values ...interface{}) redis.Result
+	LRangeCall    func(key string, start, stop int64) redis.Result
+	LTrimCall     func(key string, start, stop int64) redis.Result
+	LLenCall      func(key string) redis.Result
+	ExpireCall    func(key string, value time.Duration) redis.Result
+	TTLCall       func(key string) redis.Result
+	MGetCall      func(keys []string) redis.Result
+	SCardCall     func(key string) redis.Result
+	EvalCall      func(script string, keys []string, args ...interface{}) redis.Result
 }
 
 // Del mocks get
@@ -121,6 +122,11 @@ func (m *MockClient) Keys(pattern string) redis.Result {
 // SMembers mocks SMembers
 func (m *MockClient) SMembers(key string) redis.Result {
 	return m.SMembersCall(key)
+}
+
+// SIsMember mocks SIsMember
+func (m *MockClient) SIsMember(key string, member interface{}) redis.Result {
+	return m.SIsMemberCall(key, member)
 }
 
 // SAdd mocks SAdd
