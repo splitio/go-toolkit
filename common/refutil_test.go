@@ -55,7 +55,6 @@ func TestInt64RefOrNil(t *testing.T) {
 	if Int64RefOrNil(0) != nil {
 		t.Error("Should be nil")
 	}
-
 }
 
 func TestIntRefOrNil(t *testing.T) {
@@ -66,5 +65,48 @@ func TestIntRefOrNil(t *testing.T) {
 	if IntRefOrNil(0) != nil {
 		t.Error("Should be nil")
 	}
+}
 
+func TestAsIntOrNil(t *testing.T) {
+	a := AsIntOrNil(123456789)
+	if a == nil {
+		t.Error("Wrong int reference")
+	}
+	b := AsIntOrNil("some")
+	if b != nil {
+		t.Error("It should be nil")
+	}
+}
+
+func TestAsInt64OrNil(t *testing.T) {
+	a := AsInt64OrNil(int64(123456789))
+	if a == nil {
+		t.Error("Wrong int reference")
+	}
+	b := AsInt64OrNil("some")
+	if b != nil {
+		t.Error("It should be nil")
+	}
+}
+
+func TestAsFloat64OrNil(t *testing.T) {
+	a := AsFloat64OrNil(float64(123456789))
+	if a == nil {
+		t.Error("Wrong int reference")
+	}
+	b := AsFloat64OrNil("some")
+	if b != nil {
+		t.Error("It should be nil")
+	}
+}
+
+func TestAsStringOrNil(t *testing.T) {
+	a := AsStringOrNil("some")
+	if a == nil {
+		t.Error("Wrong string reference")
+	}
+	b := AsStringOrNil(int64(123456789))
+	if b != nil {
+		t.Error("It should be nil")
+	}
 }
