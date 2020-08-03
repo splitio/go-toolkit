@@ -17,6 +17,7 @@ type WorkerAdmin struct {
 	signalsMutex sync.RWMutex
 	signals      map[string]chan int
 	logger       logging.LoggerInterface
+	wg           sync.WaitGroup
 }
 
 // Worker interface should be implemented by concrete workers that will perform the actual job
@@ -37,6 +38,7 @@ func (a *WorkerAdmin) workerWrapper(w Worker) {
 	a.signalsMutex.Lock()
 	a.signals[w.Name()] = make(chan int, 10)
 	a.signalsMutex.Unlock()
+	defer a.wg.Done()
 	defer func() {
 		if r := recover(); r != nil {
 			a.logger.Error(fmt.Sprintf(
@@ -77,6 +79,7 @@ func (a *WorkerAdmin) AddWorker(w Worker) {
 		a.logger.Error("AddWorker called with nil")
 		return
 	}
+	a.wg.Add(1)
 	go a.workerWrapper(w)
 }
 
@@ -111,7 +114,7 @@ func (a *WorkerAdmin) StopWorker(name string) error {
 }
 
 // StopAll ends all worker's event loops
-func (a *WorkerAdmin) StopAll() error {
+func (a *WorkerAdmin) StopAll(blocking bool) error {
 	failed := make([]string, 0)
 	workerNames := make([]string, 0)
 
@@ -131,6 +134,10 @@ func (a *WorkerAdmin) StopAll() error {
 	}
 	if len(failed) > 0 {
 		return fmt.Errorf("Workers %v failed to shutdown", failed)
+	}
+
+	if blocking {
+		a.wg.Wait()
 	}
 
 	return nil

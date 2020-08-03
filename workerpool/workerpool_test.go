@@ -59,7 +59,7 @@ func TestWorkerAdminConstructionAndNormalOperation(t *testing.T) {
 	}
 	resMutex.RUnlock()
 	time.Sleep(time.Second * 1)
-	errs := wa.StopAll()
+	errs := wa.StopAll(false)
 	if errs != nil {
 		t.Error("Not all workers stopped properly")
 		t.Error(errs)
@@ -104,5 +104,47 @@ func TestWorkerAdminWithFailingWorkers(t *testing.T) {
 
 	for i := 0; i < 10; i++ {
 		wa.QueueMessage(i)
+	}
+}
+
+func TestWaitingForWorkersToFinish(t *testing.T) {
+	// To test this, we'll use a map of strings to int.
+	// Each worker will store the number popped from the queue in the map with the key being the worker name.
+	// This will allow us to track which worker has processed each message and determine if a stopped worker keeps
+	// processing messages.
+	// TODO
+	logger := logging.NewLogger(&logging.LoggerOptions{})
+	wa := NewWorkerAdmin(100, logger)
+	results := make(map[string]int)
+	wa.AddWorker(&okWorker{id: 1, results: results})
+	wa.AddWorker(&okWorker{id: 2, results: results})
+	wa.AddWorker(&okWorker{id: 3, results: results})
+	wa.AddWorker(&failingWorker{id: 4})
+
+	for i := 0; i < 10; i++ {
+		wa.QueueMessage(i)
+	}
+	wa.StopWorker("worker_2")
+	for i := 10; i < 20; i++ {
+		wa.QueueMessage(i)
+	}
+
+	resMutex.RLock()
+	if results["worker_2"] > 10 {
+		t.Error("Worker should have stopped working!")
+	}
+	resMutex.RUnlock()
+	time.Sleep(time.Second * 1)
+	errs := wa.StopAll(true)
+	if errs != nil {
+		t.Error("Not all workers stopped properly")
+		t.Error(errs)
+	}
+
+	for _, i := range []int{1, 2, 3, 4} {
+		wName := fmt.Sprintf("worker_%d", i)
+		if wa.IsWorkerRunning(wName) {
+			t.Errorf("Worker %s should be stopped", wName)
+		}
 	}
 }
