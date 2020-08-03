@@ -1,4 +1,4 @@
-2.1.0 ()
+2.1.0 (Aug 3, 2020)
  - Added redis wrapper.
  - Added SSE client.
 2.0.1 (Jul 1, 2020)

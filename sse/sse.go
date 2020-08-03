@@ -112,7 +112,7 @@ func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, err
 	return data, nil
 }
 
-func parseHttpError(resp *http.Response) int {
+func parseHTTPError(resp *http.Response) int {
 	if resp.StatusCode >= http.StatusInternalServerError {
 		return ErrorInternal
 	}
@@ -160,7 +160,7 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 	}
 
 	if resp.StatusCode != 200 {
-		l.status <- parseHttpError(resp)
+		l.status <- parseHTTPError(resp)
 		return
 	}
 	defer resp.Body.Close()
@@ -185,8 +185,6 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 	for {
 		select {
 		case <-l.shutdown:
-			// Response body is closed
-			//
 			l.logger.Info("Shutting down listener")
 			return
 		case event, ok := <-eventChannel:
