@@ -109,22 +109,17 @@ func normalizeOptions(options *LoggerOptions) *LoggerOptions {
 func NewLogger(options *LoggerOptions) LoggerInterface {
 
 	options = normalizeOptions(options)
-
-	logger := &Logger{
-		debugLogger:   *log.New(options.DebugWriter, "DEBUG - ", options.StandardLoggerFlags),
-		infoLogger:    *log.New(options.InfoWriter, "INFO - ", options.StandardLoggerFlags),
-		warningLogger: *log.New(options.WarningWriter, "WARNING - ", options.StandardLoggerFlags),
-		errorLogger:   *log.New(options.ErrorWriter, "ERROR - ", options.StandardLoggerFlags),
-		verboseLogger: *log.New(options.VerboseWriter, "VERBOSE - ", options.StandardLoggerFlags),
-		framesToSkip:  3 + options.ExtraFramesToSkip,
-	}
-
+	prefix := ""
 	if options.Prefix != "" {
-		logger.debugLogger.SetPrefix(options.Prefix)
-		logger.infoLogger.SetPrefix(options.Prefix)
-		logger.warningLogger.SetPrefix(options.Prefix)
-		logger.verboseLogger.SetPrefix(options.Prefix)
-		logger.errorLogger.SetPrefix(options.Prefix)
+		prefix = fmt.Sprintf("%s - ", options.Prefix)
+	}
+	logger := &Logger{
+		debugLogger:   *log.New(options.DebugWriter, fmt.Sprintf("%sDEBUG - ", prefix), options.StandardLoggerFlags),
+		infoLogger:    *log.New(options.InfoWriter, fmt.Sprintf("%sINFO - ", prefix), options.StandardLoggerFlags),
+		warningLogger: *log.New(options.WarningWriter, fmt.Sprintf("%sWARNING - ", prefix), options.StandardLoggerFlags),
+		errorLogger:   *log.New(options.ErrorWriter, fmt.Sprintf("%sERROR - ", prefix), options.StandardLoggerFlags),
+		verboseLogger: *log.New(options.VerboseWriter, fmt.Sprintf("%sVERBOSE - ", prefix), options.StandardLoggerFlags),
+		framesToSkip:  3 + options.ExtraFramesToSkip,
 	}
 
 	return &LevelFilteredLoggerWrapper{
