@@ -182,7 +182,15 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		}
 	}()
 
+	// Create timeout timer in case SSE dont receive notifications or keepalive messages
+	idleDuration := time.Duration(l.timeout) * time.Second
+	keepAliveTimer := time.NewTimer(idleDuration)
+	defer keepAliveTimer.Stop()
+
 	for {
+		//  Resetting timer
+		keepAliveTimer.Reset(idleDuration)
+
 		select {
 		case <-l.shutdown:
 			l.logger.Info("Shutting down listener")
@@ -199,7 +207,7 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 					callback(event)
 				}()
 			}
-		case <-time.After(time.Duration(l.timeout) * time.Second):
+		case <-keepAliveTimer.C: // Timedout
 			l.status <- ErrorKeepAlive
 			return
 		}

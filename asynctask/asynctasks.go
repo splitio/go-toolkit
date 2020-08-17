@@ -81,6 +81,11 @@ func (t *AsyncTask) Start() {
 			}
 		}
 
+		// Create timeout timer
+		idleDuration := time.Second * time.Duration(t.period)
+		taskTimer := time.NewTimer(idleDuration)
+		defer taskTimer.Stop()
+
 		// Task execution
 		for t._running() {
 			// Run the wrapped task and handle the returned error if any.
@@ -88,6 +93,9 @@ func (t *AsyncTask) Start() {
 			if err != nil && t.logger != nil {
 				t.logger.Error(err.Error())
 			}
+
+			// Resetting timer
+			taskTimer.Reset(idleDuration)
 
 			// Wait for either a timeout or an interruption (can be a stop signal or a wake up)
 			select {
@@ -97,7 +105,7 @@ func (t *AsyncTask) Start() {
 					t.running.Store(false)
 				case taskMessageWakeup:
 				}
-			case <-time.After(time.Second * time.Duration(t.period)):
+			case <-taskTimer.C: // Timedout
 			}
 		}
 
