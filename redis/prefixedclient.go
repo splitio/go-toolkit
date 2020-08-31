@@ -67,7 +67,7 @@ func (p *PrefixedRedisClient) SMembers(key string) ([]string, error) {
 	return p.Client.SMembers(p.withPrefix(key)).Multi()
 }
 
-// SMembers returns a slice with all the members of a set
+// SIsMember returns true if members is in the set
 func (p *PrefixedRedisClient) SIsMember(key string, member interface{}) bool {
 	return p.Client.SIsMember(p.withPrefix(key), member).Bool()
 }
@@ -79,7 +79,7 @@ func (p *PrefixedRedisClient) SAdd(key string, members ...interface{}) (int64, e
 
 // SRem removes members from a set
 func (p *PrefixedRedisClient) SRem(key string, members ...interface{}) (int64, error) {
-	return p.Client.SRem(p.withPrefix(key), members).Result()
+	return p.Client.SRem(p.withPrefix(key), members...).Result()
 }
 
 // Exists returns true if a key exists in redis

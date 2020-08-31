@@ -83,6 +83,7 @@ var levels map[string]int = map[string]int{
 	"VERBOSE": LevelVerbose,
 }
 
+// Level gets current level
 func Level(level string) int {
 	l, ok := levels[level]
 	if !ok {
