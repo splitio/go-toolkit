@@ -3,14 +3,14 @@
  - Fixed possible leaks with timers.
 
 2.1.1 (Aug 14, 2020)
- - Merge with previously releseased impression hashing tools.
+ - Merged with previously releseased impression hashing tools
 
 2.1.0 (Aug 3, 2020)
  - Added redis wrapper.
  - Added SSE client.
 
 2.0.1 (Jul 1, 2020)
- - fix memory leak in local-cache.
+ - Fixed memory leak in local-cache.
 
 2.0.0 (May 7, 2020)
  - Added test helpers.
