@@ -87,7 +87,7 @@ func parseData(raw []byte) (map[string]interface{}, error) {
 
 func (l *SSEClient) readEvent(reader *bufio.Reader) (map[string]interface{}, error) {
 	line, err := reader.ReadBytes('\n')
-	if err != nil && err != io.EOF {
+	if err != nil {
 		return nil, err
 	}
 
