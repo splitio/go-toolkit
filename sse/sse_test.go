@@ -141,7 +141,6 @@ func TestStopBlock(t *testing.T) {
 	}
 
 	mockedClient.Shutdown()
-	<-stopChannel // Will fail with timeout if message never arrives
 }
 
 func TestConnectionEOF(t *testing.T) {
@@ -187,5 +186,4 @@ func TestConnectionEOF(t *testing.T) {
 	}
 
 	mockedClient.Shutdown()
-	<-stopChannel // Will fail with timeout if message never arrives
 }
