@@ -123,36 +123,67 @@ func TestStopBlock(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	status := make(chan int, 1)
+	statusChannel := make(chan int, 1)
+	stopChannel := make(chan struct{}, 1)
 	mockedClient := SSEClient{
 		client:   http.Client{},
 		logger:   logger,
-		shutdown: make(chan struct{}, 1),
+		shutdown: stopChannel,
 		timeout:  30,
 		url:      ts.URL,
-		status:   status,
+		status:   statusChannel,
 	}
 
-	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
-	})
-
-	ready := <-status
-	if ready != OK {
+	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {})
+	status := <-statusChannel
+	if status != OK {
 		t.Error("It should send ready flag")
 	}
 
-	var msg struct{}
-	mutextTest := sync.RWMutex{}
-	go func() {
-		defer mutextTest.Unlock()
-		mutextTest.Lock()
-	}()
+	mockedClient.Shutdown()
+}
+
+func TestConnectionEOF(t *testing.T) {
+	logger := logging.NewLogger(&logging.LoggerOptions{})
+	var ts *httptest.Server
+	ts = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		flusher, err := w.(http.Flusher)
+		if !err {
+			t.Error("Unexpected error")
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+
+		fmt.Fprintf(w, ":keepalive")
+		flusher.Flush()
+		time.Sleep(1 * time.Second)
+		ts.Listener.Close()
+	}))
+	defer ts.Close()
+
+	statusChannel := make(chan int, 1)
+	stopChannel := make(chan struct{}, 1)
+	mockedClient := SSEClient{
+		client:   http.Client{},
+		logger:   logger,
+		shutdown: stopChannel,
+		timeout:  30,
+		url:      ts.URL,
+		status:   statusChannel,
+	}
+
+	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {})
+	status := <-statusChannel
+	if status != OK {
+		t.Error("It should send ready flag")
+	}
+
+	status = <-statusChannel
+	if status != ErrorReadingStream {
+		t.Error("Should have triggered an ErrorReadingStreamError")
+	}
 
 	mockedClient.Shutdown()
-
-	mutextTest.RLock()
-	if msg != struct{}{} {
-		t.Error("It should receive stop")
-	}
-	mutextTest.RUnlock()
 }
