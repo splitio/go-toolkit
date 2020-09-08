@@ -173,6 +173,7 @@ func (l *SSEClient) Do(params map[string]string, callback func(e map[string]inte
 		for shouldRun.Load().(bool) {
 			event, err := l.readEvent(reader)
 			if err != nil {
+				fmt.Println(err)
 				l.logger.Error(err)
 				close(eventChannel)
 				return
