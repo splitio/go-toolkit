@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/splitio/go-toolkit/logging"
+	"github.com/splitio/go-toolkit/v3/logging"
 )
 
 func TestSSEError(t *testing.T) {
