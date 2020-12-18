@@ -7,3 +7,11 @@ func StringValueOrDefault(str string, def string) string {
 	}
 	return def
 }
+
+// StringFromRef returns original value if not empty. Default otherwise.
+func StringFromRef(str *string) string {
+	if str == nil {
+		return ""
+	}
+	return *str
+}
