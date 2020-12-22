@@ -11,6 +11,18 @@ func TestStringRef(t *testing.T) {
 	}
 }
 
+func TestStringFromRef(t *testing.T) {
+	s1 := "string1"
+	var s2 *string = nil
+	if StringFromRef(&s1) != "string1" {
+		t.Error("Should have returned original value")
+	}
+
+	if StringFromRef(s2) != "" {
+		t.Error("Should have returned empty string")
+	}
+}
+
 func TestInt64Ref(t *testing.T) {
 	a := int64(3)
 	if a != *Int64Ref(a) {
@@ -18,21 +30,21 @@ func TestInt64Ref(t *testing.T) {
 	}
 }
 
+func TestInt64FromRef(t *testing.T) {
+	a := int64(3)
+	if Int64FromRef(&a) != 3 {
+		t.Error("Should be 3")
+	}
+
+	if Int64FromRef(nil) != 0 {
+		t.Error("Should be 0")
+	}
+}
+
 func TestIntRef(t *testing.T) {
 	a := int(43)
 	if a != *IntRef(a) {
 		t.Error("Wrong int reference")
-	}
-}
-
-func TestInt64Value(t *testing.T) {
-	a := int64(3)
-	if Int64Value(&a) != 3 {
-		t.Error("Should be 3")
-	}
-
-	if Int64Value(nil) != 0 {
-		t.Error("Should be 0")
 	}
 }
 
