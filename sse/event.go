@@ -1,0 +1,110 @@
+package sse
+
+import (
+	"strconv"
+	"strings"
+	"sync"
+)
+
+const (
+	sseDelimiter = ":"
+	sseData      = "data"
+	sseEvent     = "event"
+	sseID        = "id"
+	sseRetry     = "retry"
+)
+
+// RawEvent represents an incoming SSE event
+type RawEvent struct {
+	id    string
+	event string
+	data  string
+	retry int64
+}
+
+// ID returns the event id
+func (r *RawEvent) ID() string { return r.id }
+
+// Event returns the event type
+func (r *RawEvent) Event() string { return r.event }
+
+// Data returns the event associated data
+func (r *RawEvent) Data() string { return r.data }
+
+// Retry returns the expected retry time
+func (r *RawEvent) Retry() int64 { return r.retry }
+
+// IsError returns true if the message is an error
+func (r *RawEvent) IsError() bool { return r.event == "error" }
+
+// IsEmpty returns true if the event contains no id, event type and data
+func (r *RawEvent) IsEmpty() bool { return r.event == "" && r.id == "" && r.data == "" }
+
+// EventBuilder interface
+type EventBuilder interface {
+	AddLine(string)
+	Build() *RawEvent
+}
+
+// EventBuilderImpl implenets the EventBuilder interface. Used to parse incoming event lines
+type EventBuilderImpl struct {
+	includesComment bool
+	mutex           sync.Mutex
+	lines           []string
+}
+
+// AddLine adds a new line belonging to the currently being processed event
+func (b *EventBuilderImpl) AddLine(line string) {
+	if strings.HasPrefix(line, sseDelimiter) {
+		// Ignore comments
+		return
+	}
+
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	b.lines = append(b.lines, line)
+}
+
+// Build processes all the added lines and builds the event
+func (b *EventBuilderImpl) Build() *RawEvent {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	if len(b.lines) == 0 { // Empty event
+		return &RawEvent{}
+	}
+
+	e := &RawEvent{}
+	for _, line := range b.lines {
+		splitted := strings.SplitN(line, sseDelimiter, 2)
+		if len(splitted) != 2 {
+			// TODO: log invalid line.
+			continue
+		}
+
+		switch splitted[0] {
+		case sseID:
+			e.id = strings.TrimSpace(splitted[1])
+		case sseData:
+			e.data = strings.TrimSpace(splitted[1])
+		case sseEvent:
+			e.event = strings.TrimSpace(splitted[1])
+		case sseRetry:
+			e.retry, _ = strconv.ParseInt(strings.TrimSpace(splitted[1]), 10, 64)
+		}
+	}
+
+	return e
+}
+
+// Reset clears the lines accepted
+func (b *EventBuilderImpl) Reset() {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+	b.lines = []string{}
+}
+
+// NewEventBuilder constructs a new event builder
+func NewEventBuilder() *EventBuilderImpl {
+	return &EventBuilderImpl{lines: []string{}}
+}
