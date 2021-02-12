@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/splitio/go-toolkit/v3/logging"
+	"github.com/splitio/go-toolkit/v4/logging"
 )
 
 func TestAsyncTaskNormalOperation(t *testing.T) {

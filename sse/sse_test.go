@@ -10,10 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/splitio/go-toolkit/v3/logging"
+	"github.com/splitio/go-toolkit/v4/logging"
 )
 
-func TestSSEError(t *testing.T) {
+func TestSSEErrorConnecting(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
 	client, _ := NewClient("", 120, logger)
 	err := client.Do(make(map[string]string), func(e RawEvent) { t.Error("It should not execute anything") })

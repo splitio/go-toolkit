@@ -10,13 +10,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/splitio/go-toolkit/v3/logging"
+	"github.com/splitio/go-toolkit/v4/logging"
 )
 
 const (
 	statusIdle = iota
 	statusRunning
 	statusShuttingDown
+
+	endOfLineChar = '\n'
+	endOfLineStr  = "\n"
 )
 
 // Client struct
@@ -45,6 +48,31 @@ func NewClient(url string, timeout int, logger logging.LoggerInterface) (*Client
 		timeout:          time.Duration(timeout) * time.Second,
 		logger:           logger,
 	}, nil
+}
+
+func (l *Client) readEvents(in *bufio.Reader, out chan<- RawEvent) {
+	eventBuilder := NewEventBuilder()
+	for {
+		line, err := in.ReadString(endOfLineChar)
+		l.logger.Debug("Incoming SSE line: ", line)
+		if err != nil {
+			if atomic.LoadInt32(&l.status) == statusShuttingDown {
+				l.logger.Error(err)
+			}
+			close(out)
+			return
+		}
+		if line != endOfLineStr {
+			eventBuilder.AddLine(line)
+			continue
+
+		}
+		l.logger.Debug("Building SSE event")
+		if event := eventBuilder.Build(); event != nil {
+			out <- *event
+		}
+		eventBuilder.Reset()
+	}
 }
 
 // Do starts streaming
@@ -90,33 +118,8 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 	defer resp.Body.Close()
 
 	reader := bufio.NewReader(resp.Body)
-
 	eventChannel := make(chan RawEvent, 1000)
-
-	go func() {
-		eventBuilder := NewEventBuilder()
-		for {
-			line, err := reader.ReadString('\n')
-			l.logger.Debug("Incoming SSE line: ", line)
-			if err != nil {
-				if atomic.LoadInt32(&l.status) == statusShuttingDown {
-					l.logger.Error(err)
-				}
-				close(eventChannel)
-				return
-			}
-			if line != "\n" {
-				eventBuilder.AddLine(line)
-				continue
-
-			}
-			l.logger.Debug("Building SSE event")
-			if event := eventBuilder.Build(); event != nil {
-				eventChannel <- *event
-			}
-			eventBuilder.Reset()
-		}
-	}()
+	go l.readEvents(reader, eventChannel)
 
 	// Create timeout timer in case SSE dont receive notifications or keepalive messages
 	keepAliveTimer := time.NewTimer(l.timeout)
