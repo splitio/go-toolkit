@@ -4,8 +4,8 @@ import (
 	"errors"
 )
 
-// ErrAlreadyRunning is the error tor eturn when Do() gets called on an already running client.
-var ErrAlreadyRunning = errors.New("sse client already running")
+// ErrNotIdle is the error tor eturn when Do() gets called on an already running client.
+var ErrNotIdle = errors.New("sse client already running")
 
 // ErrReadingStream is the error to return when channel event channel is closed because of an error reading the stream
 var ErrReadingStream = errors.New("sse channel closed")

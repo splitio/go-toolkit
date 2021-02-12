@@ -3,6 +3,7 @@ package sse
 import (
 	"errors"
 	"fmt"
+	//"log"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"github.com/splitio/go-toolkit/v3/logging"
-	gtSync "github.com/splitio/go-toolkit/v3/sync"
 )
 
 func TestSSEError(t *testing.T) {
@@ -30,9 +30,8 @@ func TestSSEError(t *testing.T) {
 	mockedClient := Client{
 		url:              ts.URL,
 		client:           http.Client{},
-		shutdown:         make(chan struct{}, 1),
-		shutdownExpected: gtSync.NewAtomicBool(false),
-		executing:        gtSync.NewAtomicBool(false),
+		shutdownRequest:  make(chan struct{}, 1),
+		shutdownComplete: sync.NewCond(&sync.Mutex{}),
 		logger:           logger,
 	}
 
@@ -66,9 +65,8 @@ func TestSSE(t *testing.T) {
 	mockedClient := Client{
 		url:              ts.URL,
 		client:           http.Client{},
-		shutdown:         make(chan struct{}, 1),
-		shutdownExpected: gtSync.NewAtomicBool(false),
-		executing:        gtSync.NewAtomicBool(false),
+		shutdownRequest:  make(chan struct{}, 1),
+		shutdownComplete: sync.NewCond(&sync.Mutex{}),
 		timeout:          30 * time.Second,
 		logger:           logger,
 	}
@@ -118,9 +116,8 @@ func TestStopBlock(t *testing.T) {
 	mockedClient := Client{
 		client:           http.Client{},
 		logger:           logger,
-		shutdown:         make(chan struct{}, 1),
-		shutdownExpected: gtSync.NewAtomicBool(false),
-		executing:        gtSync.NewAtomicBool(false),
+		shutdownRequest:  make(chan struct{}, 1),
+		shutdownComplete: sync.NewCond(&sync.Mutex{}),
 		timeout:          30 * time.Second,
 		url:              ts.URL,
 	}
@@ -162,9 +159,8 @@ func TestConnectionEOF(t *testing.T) {
 	mockedClient := Client{
 		client:           http.Client{},
 		logger:           logger,
-		shutdown:         make(chan struct{}, 1),
-		shutdownExpected: gtSync.NewAtomicBool(false),
-		executing:        gtSync.NewAtomicBool(false),
+		shutdownRequest:  make(chan struct{}, 1),
+		shutdownComplete: sync.NewCond(&sync.Mutex{}),
 		timeout:          30 * time.Second,
 		url:              ts.URL,
 	}
@@ -181,14 +177,17 @@ func TestConnectionEOF(t *testing.T) {
 func TestCustom(t *testing.T) {
 	url := `https://streaming.split.io/event-stream`
 	logger := logging.NewLogger(&logging.LoggerOptions{LogLevel: logging.LevelError, StandardLoggerFlags: log.Llongfile})
-	client, _ := NewClient(url, 10, logger)
+	client, _ := NewClient(url, 50, logger)
 
+	ready := make(chan struct{})
+	accessToken := ``
+	channels := "NzM2MDI5Mzc0_MTgyNTg1MTgwNg==_splits,[?occupancy=metrics.publishers]control_pri,[?occupancy=metrics.publishers]control_sec"
 	go func() {
 		err := client.Do(
 			map[string]string{
-				"accessToken": ``,
+				"accessToken": accessToken,
 				"v":           "1.1",
-				"channel":     "NzM2MDI5Mzc0_MTgyNTg1MTgwNg==_splits,[?occupancy=metrics.publishers]control_pri,[?occupancy=metrics.publishers]control_sec",
+				"channel":     channels,
 			},
 			func(e RawEvent) {
 				fmt.Printf("Event: %+v\n", e)
@@ -196,10 +195,31 @@ func TestCustom(t *testing.T) {
 		if err != nil {
 			t.Error("sse error:", err)
 		}
+		ready <- struct{}{}
 	}()
 	time.Sleep(5 * time.Second)
 	client.Shutdown(true)
+	<-ready
+	fmt.Println(1)
+	go func() {
+		err := client.Do(
+			map[string]string{
+				"accessToken": accessToken,
+				"v":           "1.1",
+				"channel":     channels,
+			},
+			func(e RawEvent) {
+				fmt.Printf("Event: %+v\n", e)
+			})
+		if err != nil {
+			t.Error("sse error:", err)
+		}
+		ready <- struct{}{}
+	}()
 	time.Sleep(5 * time.Second)
+	client.Shutdown(true)
+	<-ready
+	fmt.Println(2)
 
 }
 */

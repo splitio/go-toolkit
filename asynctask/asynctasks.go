@@ -43,7 +43,7 @@ func (t *AsyncTask) Start() {
 
 	if t._running() {
 		if t.logger != nil {
-			t.logger.Warning("Task %s is already running. Aborting new execution.", t.name)
+			t.logger.Warning(fmt.Sprintf("Task %s is already running. Aborting new execution.", t.name))
 		}
 		return
 	}
