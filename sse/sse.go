@@ -50,13 +50,13 @@ func NewClient(url string, timeout int, logger logging.LoggerInterface) (*Client
 	}, nil
 }
 
-func (l *Client) readEvents(in *bufio.Reader, out chan<- RawEvent) {
+func (l *Client) readEvents(in *bufio.Reader, out chan<- RawEventImpl) {
 	eventBuilder := NewEventBuilder()
 	for {
 		line, err := in.ReadString(endOfLineChar)
 		l.logger.Debug("Incoming SSE line: ", line)
 		if err != nil {
-			if atomic.LoadInt32(&l.status) == statusShuttingDown {
+			if atomic.LoadInt32(&l.status) != statusShuttingDown {
 				l.logger.Error(err)
 			}
 			close(out)
@@ -76,7 +76,7 @@ func (l *Client) readEvents(in *bufio.Reader, out chan<- RawEvent) {
 }
 
 // Do starts streaming
-func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
+func (l *Client) Do(params map[string]string, callback func(e RawEventImpl)) error {
 
 	if !atomic.CompareAndSwapInt32(&l.status, statusIdle, statusRunning) {
 		return ErrNotIdle
@@ -118,7 +118,7 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 	defer resp.Body.Close()
 
 	reader := bufio.NewReader(resp.Body)
-	eventChannel := make(chan RawEvent, 1000)
+	eventChannel := make(chan RawEventImpl, 1000)
 	go l.readEvents(reader, eventChannel)
 
 	// Create timeout timer in case SSE dont receive notifications or keepalive messages

@@ -14,8 +14,18 @@ const (
 	sseRetry     = "retry"
 )
 
-// RawEvent represents an incoming SSE event
-type RawEvent struct {
+// RawEvent interface contains the methods that expose the incoming SSE properties
+type RawEvent interface {
+	ID() string
+	Event() string
+	Data() string
+	Retry() int64
+	IsError() bool
+	IsEmpty() bool
+}
+
+// RawEventImpl represents an incoming SSE event
+type RawEventImpl struct {
 	id    string
 	event string
 	data  string
@@ -23,27 +33,27 @@ type RawEvent struct {
 }
 
 // ID returns the event id
-func (r *RawEvent) ID() string { return r.id }
+func (r *RawEventImpl) ID() string { return r.id }
 
 // Event returns the event type
-func (r *RawEvent) Event() string { return r.event }
+func (r *RawEventImpl) Event() string { return r.event }
 
 // Data returns the event associated data
-func (r *RawEvent) Data() string { return r.data }
+func (r *RawEventImpl) Data() string { return r.data }
 
 // Retry returns the expected retry time
-func (r *RawEvent) Retry() int64 { return r.retry }
+func (r *RawEventImpl) Retry() int64 { return r.retry }
 
 // IsError returns true if the message is an error
-func (r *RawEvent) IsError() bool { return r.event == "error" }
+func (r *RawEventImpl) IsError() bool { return r.event == "error" }
 
 // IsEmpty returns true if the event contains no id, event type and data
-func (r *RawEvent) IsEmpty() bool { return r.event == "" && r.id == "" && r.data == "" }
+func (r *RawEventImpl) IsEmpty() bool { return r.event == "" && r.id == "" && r.data == "" }
 
 // EventBuilder interface
 type EventBuilder interface {
 	AddLine(string)
-	Build() *RawEvent
+	Build() *RawEventImpl
 }
 
 // EventBuilderImpl implenets the EventBuilder interface. Used to parse incoming event lines
@@ -66,15 +76,15 @@ func (b *EventBuilderImpl) AddLine(line string) {
 }
 
 // Build processes all the added lines and builds the event
-func (b *EventBuilderImpl) Build() *RawEvent {
+func (b *EventBuilderImpl) Build() *RawEventImpl {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 
 	if len(b.lines) == 0 { // Empty event
-		return &RawEvent{}
+		return &RawEventImpl{}
 	}
 
-	e := &RawEvent{}
+	e := &RawEventImpl{}
 	for _, line := range b.lines {
 		splitted := strings.SplitN(line, sseDelimiter, 2)
 		if len(splitted) != 2 {
