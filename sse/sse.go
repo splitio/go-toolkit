@@ -56,7 +56,7 @@ func (l *Client) readEvents(in *bufio.Reader, out chan<- RawEvent) {
 		line, err := in.ReadString(endOfLineChar)
 		l.logger.Debug("Incoming SSE line: ", line)
 		if err != nil {
-			if atomic.LoadInt32(&l.status) != statusShuttingDown {
+			if atomic.LoadInt32(&l.status) == statusRunning { // If it's supposed to be running, log an error
 				l.logger.Error(err)
 			}
 			close(out)
@@ -139,10 +139,10 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 		case event, ok := <-eventChannel:
 			keepAliveTimer.Reset(l.timeout)
 			if !ok {
-				if atomic.LoadInt32(&l.status) == statusShuttingDown {
-					return nil
+				if atomic.LoadInt32(&l.status) == statusRunning {
+					return ErrReadingStream
 				}
-				return ErrReadingStream
+				return nil
 			}
 
 			if event.IsEmpty() {
@@ -154,7 +154,7 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 				callback(event)
 			}()
 		case <-keepAliveTimer.C: // Timeout
-			l.logger.Warning("SSE idle timeout. Restarting connection flow")
+			l.logger.Warning("SSE idle timeout.")
 			atomic.StoreInt32(&l.status, statusShuttingDown)
 			return ErrTimeout
 		}
