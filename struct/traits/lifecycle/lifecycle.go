@@ -75,12 +75,17 @@ func (l *Manager) ShutdownRequested() <-chan struct{} {
 	return l.shutdown
 }
 
+// AbnormalShutdown should be called when the goroutine exits without Stop being called.
+func (l *Manager) AbnormalShutdown() {
+	atomic.CompareAndSwapInt32(&l.status, StatusRunning, StatusStopping)
+}
+
+// Status Returns the current status as an int32 constant
+func (l *Manager) Status() int32 {
+	return atomic.LoadInt32(&l.status)
+}
+
 // IsRunning returns true if the BG work is still going on
 func (l *Manager) IsRunning() bool {
 	return atomic.LoadInt32(&l.status) == StatusRunning
-}
-
-// AbnormalShutdown should be called when the goroutine exits without Stop being called.:w
-func (l *Manager) AbnormalShutdown() {
-	atomic.CompareAndSwapInt32(&l.status, StatusRunning, StatusStopping)
 }
