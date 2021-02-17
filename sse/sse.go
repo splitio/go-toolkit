@@ -7,10 +7,10 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/splitio/go-toolkit/v4/logging"
+	"github.com/splitio/go-toolkit/v4/struct/traits/lifecycle"
 )
 
 const (
@@ -24,13 +24,11 @@ const (
 
 // Client struct
 type Client struct {
-	url              string
-	client           http.Client
-	shutdownRequest  chan struct{}
-	timeout          time.Duration
-	shutdownComplete *sync.Cond
-	status           int32
-	logger           logging.LoggerInterface
+	lifecycle lifecycle.Manager
+	url       string
+	client    http.Client
+	timeout   time.Duration
+	logger    logging.LoggerInterface
 }
 
 // NewClient creates new SSEClient
@@ -39,15 +37,14 @@ func NewClient(url string, timeout int, logger logging.LoggerInterface) (*Client
 		return nil, errors.New("Timeout should be higher than 0")
 	}
 
-	return &Client{
-		url:              url,
-		client:           http.Client{},
-		shutdownRequest:  make(chan struct{}, 1),
-		shutdownComplete: sync.NewCond(&sync.Mutex{}),
-		status:           statusIdle,
-		timeout:          time.Duration(timeout) * time.Second,
-		logger:           logger,
-	}, nil
+	client := &Client{
+		url:     url,
+		client:  http.Client{},
+		timeout: time.Duration(timeout) * time.Second,
+		logger:  logger,
+	}
+	client.lifecycle.Setup()
+	return client, nil
 }
 
 func (l *Client) readEvents(in *bufio.Reader, out chan<- RawEvent) {
@@ -56,7 +53,7 @@ func (l *Client) readEvents(in *bufio.Reader, out chan<- RawEvent) {
 		line, err := in.ReadString(endOfLineChar)
 		l.logger.Debug("Incoming SSE line: ", line)
 		if err != nil {
-			if atomic.LoadInt32(&l.status) == statusRunning { // If it's supposed to be running, log an error
+			if l.lifecycle.IsRunning() { // If it's supposed to be running, log an error
 				l.logger.Error(err)
 			}
 			close(out)
@@ -78,7 +75,7 @@ func (l *Client) readEvents(in *bufio.Reader, out chan<- RawEvent) {
 // Do starts streaming
 func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 
-	if !atomic.CompareAndSwapInt32(&l.status, statusIdle, statusRunning) {
+	if !l.lifecycle.BeginInitialization() {
 		return ErrNotIdle
 	}
 
@@ -89,18 +86,7 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 		l.logger.Info("SSE streaming exiting")
 		cancel()
 		activeGoroutines.Wait()
-
-		// In the rare case that .Shutdown() was called before the actual SSE connection was established,
-		// we ensure that at the end of the method, the Shutdown channel is always cleared.
-		// This is done prior to signiling the shutdown caller to avoid race conditions with new .Shutdown calls
-		select {
-		case <-l.shutdownRequest:
-		default:
-		}
-
-		atomic.StoreInt32(&l.status, statusIdle)
-		l.shutdownComplete.Broadcast()
-
+		l.lifecycle.ShutdownComplete()
 	}()
 
 	req, err := l.buildCancellableRequest(ctx, params)
@@ -117,6 +103,7 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 	}
 	defer resp.Body.Close()
 
+	l.lifecycle.InitializationComplete()
 	reader := bufio.NewReader(resp.Body)
 	eventChannel := make(chan RawEvent, 1000)
 	go l.readEvents(reader, eventChannel)
@@ -127,19 +114,13 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 
 	for {
 		select {
-		case <-l.shutdownRequest:
+		case <-l.lifecycle.ShutdownRequested():
 			l.logger.Info("Shutting down listener")
 			return nil
-			// The former `return` causes the following to be executed in this specific order:
-			// - Shutdown the keep-alive timer
-			// - Close SSE response body
-			// - Cancel ongoing request
-			// - Wait for any SSE currently being processed to finish
-			// - Acknowledge end of function
 		case event, ok := <-eventChannel:
 			keepAliveTimer.Reset(l.timeout)
 			if !ok {
-				if atomic.LoadInt32(&l.status) == statusRunning {
+				if l.lifecycle.IsRunning() {
 					return ErrReadingStream
 				}
 				return nil
@@ -155,7 +136,7 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 			}()
 		case <-keepAliveTimer.C: // Timeout
 			l.logger.Warning("SSE idle timeout.")
-			atomic.StoreInt32(&l.status, statusShuttingDown)
+			l.lifecycle.AbnormalShutdown()
 			return ErrTimeout
 		}
 	}
@@ -163,18 +144,13 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 
 // Shutdown stops SSE
 func (l *Client) Shutdown(blocking bool) {
-	if !atomic.CompareAndSwapInt32(&l.status, statusRunning, statusShuttingDown) {
+	if !l.lifecycle.BeginShutdown() {
 		l.logger.Info("SSE client stopped or shutdown in progress. Ignoring.")
 		return
 	}
 
-	l.shutdownRequest <- struct{}{}
-
 	if blocking {
-		for atomic.LoadInt32(&l.status) == statusIdle {
-			l.shutdownComplete.L.Lock()
-			l.shutdownComplete.Wait()
-		}
+		l.lifecycle.AwaitShutdownComplete()
 	}
 }
 

@@ -28,12 +28,11 @@ func TestSSEErrorConnecting(t *testing.T) {
 	defer ts.Close()
 
 	mockedClient := Client{
-		url:              ts.URL,
-		client:           http.Client{},
-		shutdownRequest:  make(chan struct{}, 1),
-		shutdownComplete: sync.NewCond(&sync.Mutex{}),
-		logger:           logger,
+		url:    ts.URL,
+		client: http.Client{},
+		logger: logger,
 	}
+	mockedClient.lifecycle.Setup()
 
 	err = mockedClient.Do(make(map[string]string), func(e RawEvent) {
 		t.Error("Should not execute callback")
@@ -63,13 +62,12 @@ func TestSSE(t *testing.T) {
 	defer ts.Close()
 
 	mockedClient := Client{
-		url:              ts.URL,
-		client:           http.Client{},
-		shutdownRequest:  make(chan struct{}, 1),
-		shutdownComplete: sync.NewCond(&sync.Mutex{}),
-		timeout:          30 * time.Second,
-		logger:           logger,
+		url:     ts.URL,
+		client:  http.Client{},
+		timeout: 30 * time.Second,
+		logger:  logger,
 	}
+	mockedClient.lifecycle.Setup()
 
 	var result RawEvent
 	mutextTest := sync.RWMutex{}
@@ -114,13 +112,12 @@ func TestStopBlock(t *testing.T) {
 	defer ts.Close()
 
 	mockedClient := Client{
-		client:           http.Client{},
-		logger:           logger,
-		shutdownRequest:  make(chan struct{}, 1),
-		shutdownComplete: sync.NewCond(&sync.Mutex{}),
-		timeout:          30 * time.Second,
-		url:              ts.URL,
+		client:  http.Client{},
+		logger:  logger,
+		timeout: 30 * time.Second,
+		url:     ts.URL,
 	}
+	mockedClient.lifecycle.Setup()
 
 	waiter := make(chan struct{}, 1)
 	go func() {
@@ -151,23 +148,21 @@ func TestConnectionEOF(t *testing.T) {
 
 		fmt.Fprintf(w, ":keepalive")
 		flusher.Flush()
-		time.Sleep(1 * time.Second)
 		ts.Listener.Close()
 	}))
 	defer ts.Close()
 
 	mockedClient := Client{
-		client:           http.Client{},
-		logger:           logger,
-		shutdownRequest:  make(chan struct{}, 1),
-		shutdownComplete: sync.NewCond(&sync.Mutex{}),
-		timeout:          30 * time.Second,
-		url:              ts.URL,
+		client:  http.Client{},
+		logger:  logger,
+		timeout: 30 * time.Second,
+		url:     ts.URL,
 	}
+	mockedClient.lifecycle.Setup()
 
 	err := mockedClient.Do(make(map[string]string), func(e RawEvent) {})
 	if err != ErrReadingStream {
-		t.Error("Should have triggered an ErrorReadingStreamError")
+		t.Error("Should have triggered an ErrorReadingStreamError. Got: ", err)
 	}
 
 	mockedClient.Shutdown(true)
