@@ -57,14 +57,21 @@ func (l *Manager) ShutdownComplete() {
 	case <-l.shutdown:
 	default:
 	}
+
+	l.c.L.Lock()
 	atomic.StoreInt32(&l.status, StatusIdle)
 	l.c.Broadcast()
+	l.c.L.Unlock()
 }
 
 // AwaitShutdownComplete can be called in case you need to join against the goroutine's end
 func (l *Manager) AwaitShutdownComplete() {
-	for atomic.LoadInt32(&l.status) != StatusIdle {
+	for {
 		l.c.L.Lock()
+		if atomic.LoadInt32(&l.status) == StatusIdle {
+			l.c.L.Unlock()
+			return
+		}
 		l.c.Wait()
 		l.c.L.Unlock()
 	}

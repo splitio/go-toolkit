@@ -48,7 +48,7 @@ func TestWorkerAdminConstructionAndNormalOperation(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		wa.QueueMessage(i)
 	}
-	wa.StopWorker("worker_2")
+	wa.StopWorker("worker_2", true)
 	for i := 10; i < 20; i++ {
 		wa.QueueMessage(i)
 	}
@@ -124,7 +124,7 @@ func TestWaitingForWorkersToFinish(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		wa.QueueMessage(i)
 	}
-	wa.StopWorker("worker_2")
+	wa.StopWorker("worker_2", true)
 	for i := 10; i < 20; i++ {
 		wa.QueueMessage(i)
 	}

@@ -28,6 +28,7 @@ func TestAsyncTaskNormalOperation(t *testing.T) {
 	)
 
 	task1.Start()
+	time.Sleep(1 * time.Second)
 	if !task1.IsRunning() {
 		t.Error("Task should be running")
 	}
@@ -143,11 +144,10 @@ func TestAsyncTaskErrors(t *testing.T) {
 }
 
 func TestAsyncTaskWakeUp(t *testing.T) {
-	res := atomic.Value{}
-	res.Store(0)
+	res := int32(0)
 	task1 := NewAsyncTask(
 		"testTask1",
-		func(l logging.LoggerInterface) error { res.Store(res.Load().(int) + 1); return nil },
+		func(l logging.LoggerInterface) error { atomic.AddInt32(&res, 1); return nil },
 		20,
 		func(l logging.LoggerInterface) error { return nil },
 		func(l logging.LoggerInterface) {},
@@ -163,7 +163,7 @@ func TestAsyncTaskWakeUp(t *testing.T) {
 	_ = task1.WakeUp()
 	_ = task1.Stop(true)
 
-	if res.Load().(int) != 4 {
+	if atomic.LoadInt32(&res) != 3 {
 		t.Errorf("Task shuld have executed 4 times. It ran %d times", res)
 	}
 }
