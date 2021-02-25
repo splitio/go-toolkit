@@ -2,9 +2,11 @@ package workerpool
 
 import (
 	"fmt"
-	"github.com/splitio/go-toolkit/v3/logging"
 	"sync"
 	"time"
+
+	"github.com/splitio/go-toolkit/v4/logging"
+	"github.com/splitio/go-toolkit/v4/struct/traits/lifecycle"
 )
 
 const (
@@ -13,11 +15,11 @@ const (
 
 // WorkerAdmin struct handles multiple worker execution, popping jobs from a single queue
 type WorkerAdmin struct {
-	queue        chan interface{}
-	signalsMutex sync.RWMutex
-	signals      map[string]chan int
-	logger       logging.LoggerInterface
-	wg           sync.WaitGroup
+	queue chan interface{}
+	mutex sync.RWMutex
+	//signals      map[string]chan int
+	workers map[string]*workerWrapper
+	logger  logging.LoggerInterface
 }
 
 // Worker interface should be implemented by concrete workers that will perform the actual job
@@ -34,43 +36,66 @@ type Worker interface {
 	FailureTime() int64
 }
 
-func (a *WorkerAdmin) workerWrapper(w Worker) {
-	a.signalsMutex.Lock()
-	a.signals[w.Name()] = make(chan int, 10)
-	a.signalsMutex.Unlock()
-	defer a.wg.Done()
+type workerWrapper struct {
+	w         Worker
+	lifecycle lifecycle.Manager
+	queue     <-chan interface{}
+	logger    logging.LoggerInterface
+}
+
+func (w *workerWrapper) Start() {
+	if !w.lifecycle.BeginInitialization() {
+		w.logger.Error(fmt.Sprintf("initialization of worker '%s' aborted. Worker not idle.", w.w.Name()))
+		return
+	}
+	go w.do()
+}
+
+func (w *workerWrapper) Stop(blocking bool) {
+	if !w.lifecycle.BeginShutdown() {
+		w.logger.Error(fmt.Sprintf("shutodwn of worker '%s' aborted. Worker not running.", w.w.Name()))
+		return
+	}
+
+	if blocking {
+		w.lifecycle.AwaitShutdownComplete()
+	}
+}
+
+func (w *workerWrapper) do() {
 	defer func() {
 		if r := recover(); r != nil {
-			a.logger.Error(fmt.Sprintf(
+			w.logger.Error(fmt.Sprintf(
 				"Worker %s is panicking with the following error \"%s\" and will be shutted down.",
-				w.Name(),
+				w.w.Name(),
 				r,
 			))
-		}
-		if a.signals != nil { // This should ALWAYS be the case, but just in case... we don't want to panic here.
-			a.signalsMutex.Lock()
-			delete(a.signals, w.Name())
-			a.signalsMutex.Unlock()
+			w.lifecycle.AbnormalShutdown()
 		}
 	}()
-	defer w.Cleanup()
+	defer w.lifecycle.ShutdownComplete()
+	defer w.w.Cleanup()
+	if !w.lifecycle.InitializationComplete() {
+		return
+	}
 	for {
-		a.signalsMutex.RLock()
-		signal := a.signals[w.Name()]
-		a.signalsMutex.RUnlock()
 		select {
-		case msg := <-signal:
-			switch msg {
-			case workerSignalStop:
-				return
-			}
-		case msg := <-a.queue:
-			if err := w.DoWork(msg); err != nil {
-				w.OnError(err)
-				time.Sleep(time.Duration(w.FailureTime()) * time.Millisecond)
+		case <-w.lifecycle.ShutdownRequested():
+			return
+		case msg := <-w.queue:
+			if err := w.w.DoWork(msg); err != nil {
+				w.w.OnError(err)
+				time.Sleep(time.Duration(w.w.FailureTime()) * time.Millisecond)
 			}
 		}
 	}
+}
+
+func newWorkerWraper(w Worker, logger logging.LoggerInterface, queue <-chan interface{}) *workerWrapper {
+	worker := &workerWrapper{w: w, queue: queue, logger: logger}
+	worker.lifecycle.Setup()
+	worker.Start()
+	return worker
 }
 
 // AddWorker registers a new worker in the admin
@@ -79,8 +104,9 @@ func (a *WorkerAdmin) AddWorker(w Worker) {
 		a.logger.Error("AddWorker called with nil")
 		return
 	}
-	a.wg.Add(1)
-	go a.workerWrapper(w)
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	a.workers[w.Name()] = newWorkerWraper(w, a.logger, a.queue)
 }
 
 // QueueMessage adds a new message that will be popped by a worker and processed
@@ -98,48 +124,37 @@ func (a *WorkerAdmin) QueueMessage(m interface{}) bool {
 }
 
 // StopWorker ends the worker's event loop, preventing it from picking further jobs
-func (a *WorkerAdmin) StopWorker(name string) error {
-	a.signalsMutex.RLock()
-	c, ok := a.signals[name]
-	a.signalsMutex.RUnlock()
+func (a *WorkerAdmin) StopWorker(name string, blocking bool) error {
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	w, ok := a.workers[name]
 	if !ok {
 		return fmt.Errorf("Worker %s doesn't exist, hence it cannot be stopped", name)
 	}
-	select {
-	case c <- workerSignalStop:
-	default:
-		return fmt.Errorf("Couldn't send stop signal to worker %s", name)
-	}
+
+	w.Stop(blocking)
+
 	return nil
 }
 
 // StopAll ends all worker's event loops
 func (a *WorkerAdmin) StopAll(blocking bool) error {
-	failed := make([]string, 0)
-	workerNames := make([]string, 0)
-
-	// Get worker names safely
-	a.signalsMutex.RLock()
-	for workerName := range a.signals {
-		workerNames = append(workerNames, workerName)
-	}
-	a.signalsMutex.RUnlock()
-
-	for _, workerName := range workerNames {
-		err := a.StopWorker(workerName)
-		if err != nil {
-			a.logger.Error(err)
-			failed = append(failed, workerName)
+	wg := sync.WaitGroup{}
+	a.mutex.Lock()
+	defer a.mutex.Unlock()
+	for _, w := range a.workers {
+		if w != nil {
+			wg.Add(1)
+			go func(current *workerWrapper) {
+				current.Stop(true)
+				wg.Done()
+			}(w)
 		}
-	}
-	if len(failed) > 0 {
-		return fmt.Errorf("Workers %v failed to shutdown", failed)
 	}
 
 	if blocking {
-		a.wg.Wait()
+		wg.Wait()
 	}
-
 	return nil
 }
 
@@ -150,16 +165,16 @@ func (a *WorkerAdmin) QueueSize() int {
 
 // IsWorkerRunning returns true if the worker exists and is currently running
 func (a *WorkerAdmin) IsWorkerRunning(name string) bool {
-	a.signalsMutex.RLock()
-	_, ok := a.signals[name]
-	a.signalsMutex.RUnlock()
-	return ok // We consider a worker to be running if it exists in the list of valid signal channels
+	a.mutex.RLock()
+	defer a.mutex.RUnlock()
+	x, ok := a.workers[name]
+	return ok && x.lifecycle.IsRunning()
 }
 
 // NewWorkerAdmin instantiates a new WorkerAdmin and returns a pointer to it.
 func NewWorkerAdmin(queueSize int, logger logging.LoggerInterface) *WorkerAdmin {
 	return &WorkerAdmin{
-		signals: make(map[string]chan int, 0),
+		workers: make(map[string]*workerWrapper, 0),
 		logger:  logger,
 		queue:   make(chan interface{}, queueSize),
 	}

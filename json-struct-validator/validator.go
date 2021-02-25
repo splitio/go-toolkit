@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/splitio/go-toolkit/v3/datastructures/set"
+	"github.com/splitio/go-toolkit/v4/datastructures/set"
 )
 
 func getFieldsForStructRecursive(prefix string, structType reflect.Type) []string {

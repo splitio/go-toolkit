@@ -1,33 +1,25 @@
 package sse
 
 import (
+	"errors"
 	"fmt"
+	//"log"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/splitio/go-toolkit/v3/logging"
+	"github.com/splitio/go-toolkit/v4/logging"
 )
 
-func TestSSEError(t *testing.T) {
+func TestSSEErrorConnecting(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
-	clientErr, err := NewSSEClient("", make(chan int), 120, logger)
-	if clientErr != nil {
-		t.Error("It should be nil")
-	}
-	if err == nil || err.Error() != "Status channel should have length" {
-		t.Error("It should return err")
-	}
-
-	status := make(chan int, 1)
-	client, _ := NewSSEClient("", status, 120, logger)
-	client.Do(make(map[string]string), func(e map[string]interface{}) { t.Error("It should not execute anything") })
-
-	stats := <-status
-	if stats != ErrorRequestPerformed {
-		t.Error("Unexpected type of error")
+	client, _ := NewClient("", 120, logger)
+	err := client.Do(make(map[string]string), func(e RawEvent) { t.Error("It should not execute anything") })
+	asErrConecting := &ErrConnectionFailed{}
+	if !errors.As(err, &asErrConecting) {
+		t.Errorf("Unexpected type of error: %+v", err)
 	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -35,21 +27,18 @@ func TestSSEError(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	mockedClient := SSEClient{
-		url:      ts.URL,
-		client:   http.Client{},
-		status:   status,
-		shutdown: make(chan struct{}, 1),
-		logger:   logger,
+	mockedClient := Client{
+		url:    ts.URL,
+		client: http.Client{},
+		logger: logger,
 	}
+	mockedClient.lifecycle.Setup()
 
-	mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
+	err = mockedClient.Do(make(map[string]string), func(e RawEvent) {
 		t.Error("Should not execute callback")
 	})
-
-	stats = <-status
-	if stats != ErrorInternal {
-		t.Error("Unexpected type of error")
+	if !errors.As(err, &asErrConecting) {
+		t.Errorf("Unexpected type of error: %+v", err)
 	}
 }
 
@@ -66,41 +55,39 @@ func TestSSE(t *testing.T) {
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 
-		fmt.Fprintf(w, "data: %s\n\n", "{\"id\":\"YCh53QfLxO:0:0\",\"data\":\"some\",\"timestamp\":1591911770828}")
+		fmt.Fprintf(w, "data: %s\n\n", `{"id":"YCh53QfLxO:0:0","data":"some","timestamp":1591911770828}`)
 		flusher.Flush()
+		time.Sleep(2 * time.Second)
 	}))
 	defer ts.Close()
 
-	status := make(chan int, 1)
-	mockedClient := SSEClient{
-		url:      ts.URL,
-		client:   http.Client{},
-		status:   status,
-		shutdown: make(chan struct{}, 1),
-		timeout:  30,
-		logger:   logger,
+	mockedClient := Client{
+		url:     ts.URL,
+		client:  http.Client{},
+		timeout: 30 * time.Second,
+		logger:  logger,
 	}
+	mockedClient.lifecycle.Setup()
 
-	var result map[string]interface{}
+	var result RawEvent
 	mutextTest := sync.RWMutex{}
-	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {
-		mutextTest.Lock()
-		result = e
-		mutextTest.Unlock()
-	})
+	go func() {
+		err := mockedClient.Do(nil, func(e RawEvent) {
+			mutextTest.Lock()
+			result = e
+			mutextTest.Unlock()
+		})
+		if err != nil {
+			t.Error("sse client ended in error:", err)
+		}
+	}()
 
-	ready := <-status
-	if ready != OK {
-		t.Error("It should send ready flag")
-	}
-
-	time.Sleep(900 * time.Millisecond)
-	mockedClient.Shutdown()
-	time.Sleep(900 * time.Millisecond)
+	time.Sleep(2 * time.Second)
+	mockedClient.Shutdown(true)
 
 	mutextTest.RLock()
-	if result["data"] != "some" {
-		t.Error("Unexpected result")
+	if result.Data() != `{"id":"YCh53QfLxO:0:0","data":"some","timestamp":1591911770828}` {
+		t.Error("Unexpected result: ", result.Data())
 	}
 	mutextTest.RUnlock()
 }
@@ -120,27 +107,30 @@ func TestStopBlock(t *testing.T) {
 
 		fmt.Fprintf(w, ":keepalive")
 		flusher.Flush()
+		time.Sleep(2 * time.Second)
 	}))
 	defer ts.Close()
 
-	statusChannel := make(chan int, 1)
-	stopChannel := make(chan struct{}, 1)
-	mockedClient := SSEClient{
-		client:   http.Client{},
-		logger:   logger,
-		shutdown: stopChannel,
-		timeout:  30,
-		url:      ts.URL,
-		status:   statusChannel,
+	mockedClient := Client{
+		client:  http.Client{},
+		logger:  logger,
+		timeout: 30 * time.Second,
+		url:     ts.URL,
 	}
+	mockedClient.lifecycle.Setup()
 
-	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {})
-	status := <-statusChannel
-	if status != OK {
-		t.Error("It should send ready flag")
-	}
+	waiter := make(chan struct{}, 1)
+	go func() {
+		err := mockedClient.Do(make(map[string]string), func(e RawEvent) {})
+		if err != nil {
+			t.Error("sse client ended in error: ", err)
+		}
+		waiter <- struct{}{}
+	}()
 
-	mockedClient.Shutdown()
+	time.Sleep(1 * time.Second)
+	mockedClient.Shutdown(true)
+	<-waiter
 }
 
 func TestConnectionEOF(t *testing.T) {
@@ -158,32 +148,73 @@ func TestConnectionEOF(t *testing.T) {
 
 		fmt.Fprintf(w, ":keepalive")
 		flusher.Flush()
-		time.Sleep(1 * time.Second)
 		ts.Listener.Close()
 	}))
 	defer ts.Close()
 
-	statusChannel := make(chan int, 1)
-	stopChannel := make(chan struct{}, 1)
-	mockedClient := SSEClient{
-		client:   http.Client{},
-		logger:   logger,
-		shutdown: stopChannel,
-		timeout:  30,
-		url:      ts.URL,
-		status:   statusChannel,
+	mockedClient := Client{
+		client:  http.Client{},
+		logger:  logger,
+		timeout: 30 * time.Second,
+		url:     ts.URL,
+	}
+	mockedClient.lifecycle.Setup()
+
+	err := mockedClient.Do(make(map[string]string), func(e RawEvent) {})
+	if err != ErrReadingStream {
+		t.Error("Should have triggered an ErrorReadingStreamError. Got: ", err)
 	}
 
-	go mockedClient.Do(make(map[string]string), func(e map[string]interface{}) {})
-	status := <-statusChannel
-	if status != OK {
-		t.Error("It should send ready flag")
-	}
-
-	status = <-statusChannel
-	if status != ErrorReadingStream {
-		t.Error("Should have triggered an ErrorReadingStreamError")
-	}
-
-	mockedClient.Shutdown()
+	mockedClient.Shutdown(true)
 }
+
+/*
+func TestCustom(t *testing.T) {
+	url := `https://streaming.split.io/event-stream`
+	logger := logging.NewLogger(&logging.LoggerOptions{LogLevel: logging.LevelError, StandardLoggerFlags: log.Llongfile})
+	client, _ := NewClient(url, 50, logger)
+
+	ready := make(chan struct{})
+	accessToken := ``
+	channels := "NzM2MDI5Mzc0_MTgyNTg1MTgwNg==_splits,[?occupancy=metrics.publishers]control_pri,[?occupancy=metrics.publishers]control_sec"
+	go func() {
+		err := client.Do(
+			map[string]string{
+				"accessToken": accessToken,
+				"v":           "1.1",
+				"channel":     channels,
+			},
+			func(e RawEvent) {
+				fmt.Printf("Event: %+v\n", e)
+			})
+		if err != nil {
+			t.Error("sse error:", err)
+		}
+		ready <- struct{}{}
+	}()
+	time.Sleep(5 * time.Second)
+	client.Shutdown(true)
+	<-ready
+	fmt.Println(1)
+	go func() {
+		err := client.Do(
+			map[string]string{
+				"accessToken": accessToken,
+				"v":           "1.1",
+				"channel":     channels,
+			},
+			func(e RawEvent) {
+				fmt.Printf("Event: %+v\n", e)
+			})
+		if err != nil {
+			t.Error("sse error:", err)
+		}
+		ready <- struct{}{}
+	}()
+	time.Sleep(5 * time.Second)
+	client.Shutdown(true)
+	<-ready
+	fmt.Println(2)
+
+}
+*/
