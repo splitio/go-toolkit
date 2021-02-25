@@ -49,8 +49,10 @@ func (t *AsyncTask) Start() {
 			}
 		}()
 
-		t.lifecycle.InitializationComplete()
 		defer t.lifecycle.ShutdownComplete()
+		if !t.lifecycle.InitializationComplete() {
+			return
+		}
 
 		// If there's an initialization function, execute it
 		if t.onInit != nil {

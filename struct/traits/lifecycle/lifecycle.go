@@ -9,6 +9,7 @@ import (
 const (
 	StatusIdle = iota
 	StatusStarting
+	StatusInitializationCancelled
 	StatusRunning
 	StatusStopping
 )
@@ -36,12 +37,21 @@ func (l *Manager) BeginInitialization() bool {
 }
 
 // InitializationComplete should be called just prior to the `go ...` directive starting the async work
-func (l *Manager) InitializationComplete() {
-	atomic.StoreInt32(&l.status, StatusRunning)
+func (l *Manager) InitializationComplete() bool {
+	if !atomic.CompareAndSwapInt32(&l.status, StatusStarting, StatusRunning) {
+		atomic.StoreInt32(&l.status, StatusStopping)
+		return false
+	}
+	return true
 }
 
 // BeginShutdown should be called on the .Stop() method or whichever makes a request for the async work to stop
 func (l *Manager) BeginShutdown() bool {
+	// If we're currently initializing but not yet running, just change the status.
+	if atomic.CompareAndSwapInt32(&l.status, StatusStarting, StatusInitializationCancelled) {
+		return true
+	}
+
 	if !atomic.CompareAndSwapInt32(&l.status, StatusRunning, StatusStopping) {
 		return false
 	}

@@ -103,7 +103,10 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 	}
 	defer resp.Body.Close()
 
-	l.lifecycle.InitializationComplete()
+	if !l.lifecycle.InitializationComplete() {
+		return nil
+	}
+
 	reader := bufio.NewReader(resp.Body)
 	eventChannel := make(chan RawEvent, 1000)
 	go l.readEvents(reader, eventChannel)

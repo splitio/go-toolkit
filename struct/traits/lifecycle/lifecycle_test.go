@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -21,11 +22,10 @@ func TestLifecycleManager(t *testing.T) {
 		t.Error("initialization should fail if called more than once.")
 	}
 
-	if m.BeginShutdown() {
-		t.Error("shutdown cannot be started until the manager is fully running")
+	if !m.InitializationComplete() {
+		t.Error("should complete initialization correctly")
 	}
 
-	m.InitializationComplete()
 	if !m.IsRunning() {
 		t.Error("it should be running")
 	}
@@ -67,10 +67,6 @@ func TestLifecycleManager(t *testing.T) {
 
 	if m.BeginInitialization() {
 		t.Error("initialization should fail if called more than once.")
-	}
-
-	if m.BeginShutdown() {
-		t.Error("shutdown cannot be started until the manager is fully running")
 	}
 
 	m.InitializationComplete()
@@ -120,10 +116,6 @@ func TestLifecycleManagerAbnormalShutdown(t *testing.T) {
 		t.Error("initialization should fail if called more than once.")
 	}
 
-	if m.BeginShutdown() {
-		t.Error("shutdown cannot be started until the manager is fully running")
-	}
-
 	m.InitializationComplete()
 	if !m.IsRunning() {
 		t.Error("it should be running")
@@ -162,10 +154,6 @@ func TestLifecycleManagerAbnormalShutdown(t *testing.T) {
 		t.Error("initialization should fail if called more than once.")
 	}
 
-	if m.BeginShutdown() {
-		t.Error("shutdown cannot be started until the manager is fully running")
-	}
-
 	m.InitializationComplete()
 	if !m.IsRunning() {
 		t.Error("it should be running")
@@ -196,4 +184,51 @@ func TestLifecycleManagerAbnormalShutdown(t *testing.T) {
 		t.Error("should not be running")
 	}
 	<-done // ensure that await actually waits
+}
+
+func TestShutdownRequestWhileInitNotComplete(t *testing.T) {
+	m := Manager{}
+	m.Setup()
+
+	m.BeginInitialization()
+	if !m.BeginShutdown() {
+		t.Error("should accept the shutdown request")
+	}
+
+	if m.InitializationComplete() {
+		t.Error("initialization cannot complete.")
+	}
+
+	m.ShutdownComplete()
+
+	// Now restart the lifecycle to see if it works properly
+	m.BeginInitialization()
+
+	done := make(chan struct{}, 1)
+	var executed int32
+	go func() {
+		defer m.ShutdownComplete()
+		defer func() { done <- struct{}{} }()
+		if !m.InitializationComplete() {
+			return
+		}
+		atomic.StoreInt32(&executed, 1)
+		for {
+			select {
+			case <-time.After(1 * time.Second):
+				m.AbnormalShutdown()
+				return
+			}
+		}
+	}()
+	m.BeginShutdown()
+	m.AwaitShutdownComplete()
+	if m.IsRunning() {
+		t.Error("should not be running")
+	}
+	<-done // ensure that await actually waits
+
+	if atomic.LoadInt32(&executed) != 0 {
+		t.Error("the goroutine should have not executed further than the InitializationComplete check.")
+	}
 }

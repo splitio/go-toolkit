@@ -75,6 +75,9 @@ func (w *workerWrapper) do() {
 	}()
 	defer w.lifecycle.ShutdownComplete()
 	defer w.w.Cleanup()
+	if !w.lifecycle.InitializationComplete() {
+		return
+	}
 	for {
 		select {
 		case <-w.lifecycle.ShutdownRequested():
