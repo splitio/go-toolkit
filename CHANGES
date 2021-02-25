@@ -1,4 +1,4 @@
-4.0.0 (TBD)
+4.0.0 (Feb 25th, 2021)
  - SSE Revamp
  - Lifecycle component (workerpool, sse & asynctask now depend on it)
 
