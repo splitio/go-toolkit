@@ -1,7 +1,7 @@
 package redis
 
 import (
-	wredis "github.com/go-redis/redis/v8"
+	wredis "github.com/go-redis/redis"
 )
 
 // UniversalOptions type used for redis package

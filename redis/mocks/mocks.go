@@ -3,7 +3,7 @@ package mocks
 import (
 	"time"
 
-	"github.com/splitio/go-toolkit/v4/redis"
+	"github.com/splitio/go-toolkit/redis"
 )
 
 // MockResultOutput mocks struct

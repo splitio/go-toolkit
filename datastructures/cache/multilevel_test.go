@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/splitio/go-toolkit/v4/logging"
+	"github.com/splitio/go-toolkit/logging"
 )
 
 type LayerMock struct {

@@ -1,7 +1,7 @@
 package cache
 
 import (
-	"github.com/splitio/go-toolkit/v4/logging"
+	"github.com/splitio/go-toolkit/logging"
 )
 
 // Layer is the interface that should be implemented for all caching structs to be used with this piece of code.

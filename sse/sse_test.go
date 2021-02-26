@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/splitio/go-toolkit/v4/logging"
+	"github.com/splitio/go-toolkit/logging"
 )
 
 func TestSSEErrorConnecting(t *testing.T) {

@@ -1,10 +1,9 @@
 package redis
 
 import (
-	"context"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/go-redis/redis"
 )
 
 // ===== Command output / return value types
@@ -161,127 +160,127 @@ func (c *ClientImpl) wrapResult(result interface{}) Result {
 
 // Del implements Del wrapper for redis
 func (c *ClientImpl) Del(keys ...string) Result {
-	res := c.wrapped.Del(context.TODO(), keys...)
+	res := c.wrapped.Del(keys...)
 	return c.wrapResult(res)
 }
 
 // Exists implements Exists wrapper for redis
 func (c *ClientImpl) Exists(keys ...string) Result {
-	res := c.wrapped.Exists(context.TODO(), keys...)
+	res := c.wrapped.Exists(keys...)
 	return c.wrapResult(res)
 }
 
 // Get implements Get wrapper for redis
 func (c *ClientImpl) Get(key string) Result {
-	res := c.wrapped.Get(context.TODO(), key)
+	res := c.wrapped.Get(key)
 	return c.wrapResult(res)
 }
 
 // Set implements Set wrapper for redis
 func (c *ClientImpl) Set(key string, value interface{}, expiration time.Duration) Result {
-	res := c.wrapped.Set(context.TODO(), key, value, expiration)
+	res := c.wrapped.Set(key, value, expiration)
 	return c.wrapResult(res)
 }
 
 // Ping implements Ping wrapper for redis
 func (c *ClientImpl) Ping() Result {
-	res := c.wrapped.Ping(context.TODO())
+	res := c.wrapped.Ping()
 	return c.wrapResult(res)
 }
 
 // Keys implements Keys wrapper for redis
 func (c *ClientImpl) Keys(pattern string) Result {
-	res := c.wrapped.Keys(context.TODO(), pattern)
+	res := c.wrapped.Keys(pattern)
 	return c.wrapResult(res)
 }
 
 // SMembers implements SMembers wrapper for redis
 func (c *ClientImpl) SMembers(key string) Result {
-	res := c.wrapped.SMembers(context.TODO(), key)
+	res := c.wrapped.SMembers(key)
 	return c.wrapResult(res)
 }
 
 // SIsMember implements SIsMember wrapper for redis
 func (c *ClientImpl) SIsMember(key string, member interface{}) Result {
-	res := c.wrapped.SIsMember(context.TODO(), key, member)
+	res := c.wrapped.SIsMember(key, member)
 	return c.wrapResult(res)
 }
 
 // SAdd implements SAdd wrapper for redis
 func (c *ClientImpl) SAdd(key string, members ...interface{}) Result {
-	res := c.wrapped.SAdd(context.TODO(), key, members...)
+	res := c.wrapped.SAdd(key, members...)
 	return c.wrapResult(res)
 }
 
 // SRem implements SRem wrapper for redis
 func (c *ClientImpl) SRem(key string, members ...interface{}) Result {
-	res := c.wrapped.SRem(context.TODO(), key, members...)
+	res := c.wrapped.SRem(key, members...)
 	return c.wrapResult(res)
 }
 
 // Incr implements Incr wrapper for redis
 func (c *ClientImpl) Incr(key string) Result {
-	res := c.wrapped.Incr(context.TODO(), key)
+	res := c.wrapped.Incr(key)
 	return c.wrapResult(res)
 }
 
 // Decr implements Decr wrapper for redis
 func (c *ClientImpl) Decr(key string) Result {
-	res := c.wrapped.Decr(context.TODO(), key)
+	res := c.wrapped.Decr(key)
 	return c.wrapResult(res)
 }
 
 // RPush implements RPush wrapper for redis
 func (c *ClientImpl) RPush(key string, values ...interface{}) Result {
-	res := c.wrapped.RPush(context.TODO(), key, values...)
+	res := c.wrapped.RPush(key, values...)
 	return c.wrapResult(res)
 }
 
 // LRange implements LRange wrapper for redis
 func (c *ClientImpl) LRange(key string, start, stop int64) Result {
-	res := c.wrapped.LRange(context.TODO(), key, start, stop)
+	res := c.wrapped.LRange(key, start, stop)
 	return c.wrapResult(res)
 }
 
 // LTrim implements LTrim wrapper for redis
 func (c *ClientImpl) LTrim(key string, start, stop int64) Result {
-	res := c.wrapped.LTrim(context.TODO(), key, start, stop)
+	res := c.wrapped.LTrim(key, start, stop)
 	return c.wrapResult(res)
 }
 
 // LLen implements LLen wrapper for redis
 func (c *ClientImpl) LLen(key string) Result {
-	res := c.wrapped.LLen(context.TODO(), key)
+	res := c.wrapped.LLen(key)
 	return c.wrapResult(res)
 }
 
 // Expire implements Expire wrapper for redis
 func (c *ClientImpl) Expire(key string, value time.Duration) Result {
-	res := c.wrapped.Expire(context.TODO(), key, value)
+	res := c.wrapped.Expire(key, value)
 	return c.wrapResult(res)
 }
 
 // TTL implements TTL wrapper for redis
 func (c *ClientImpl) TTL(key string) Result {
-	res := c.wrapped.TTL(context.TODO(), key)
+	res := c.wrapped.TTL(key)
 	return c.wrapResult(res)
 }
 
 // MGet implements MGet wrapper for redis
 func (c *ClientImpl) MGet(keys []string) Result {
-	res := c.wrapped.MGet(context.TODO(), keys...)
+	res := c.wrapped.MGet(keys...)
 	return c.wrapResult(res)
 }
 
 // SCard implements SCard wrapper for redis
 func (c *ClientImpl) SCard(key string) Result {
-	res := c.wrapped.SCard(context.TODO(), key)
+	res := c.wrapped.SCard(key)
 	return c.wrapResult(res)
 }
 
 // Eval implements Eval wrapper for redis
 func (c *ClientImpl) Eval(script string, keys []string, args ...interface{}) Result {
-	res := c.wrapped.Eval(context.TODO(), script, keys, args...)
+	res := c.wrapped.Eval(script, keys, args...)
 	return c.wrapResult(res)
 }
 
