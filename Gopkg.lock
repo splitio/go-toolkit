@@ -2,7 +2,7 @@
 
 
 [[projects]]
-  digest = "1:2c0d38c0cc63b8e16067daffdfe05be8546a3c47b89c3de97f34e3314541f4cf"
+  digest = "1:456f515a80bcc5c5d99beaee2dcb0d0598b6d4d02df804ac958f0e6e51d8e8d5"
   name = "github.com/go-redis/redis"
   packages = [
     ".",
@@ -13,9 +13,9 @@
     "internal/proto",
     "internal/util",
   ]
-  pruneopts = ""
-  revision = "99cd690a7019656b0b67c6664453f27a6d8a658e"
-  version = "v6.15.7"
+  pruneopts = "UT"
+  revision = "16ab0f2ac309166bfef5cde51742f84c61c1e73c"
+  version = "v6.15.9"
 
 [solve-meta]
   analyzer-name = "dep"
