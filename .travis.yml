@@ -3,5 +3,7 @@ language: go
 go:
   - 1.x
 
+install: true
+
 script:
   - bash test.sh
