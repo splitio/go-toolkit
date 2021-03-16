@@ -300,13 +300,13 @@ func (c *ClientImpl) Eval(script string, keys []string, args ...interface{}) Res
 
 // HIncrBy implements HIncrBy wrapper for redis
 func (c *ClientImpl) HIncrBy(key string, field string, value int64) Result {
-	res := c.wrapped.HIncrBy(context.TODO(), key, field, value)
+	res := c.wrapped.HIncrBy(key, field, value)
 	return c.wrapResult(res)
 }
 
 // HGetAll implements HGetAll wrapper for redis
 func (c *ClientImpl) HGetAll(key string) Result {
-	res := c.wrapped.HGetAll(context.TODO(), key)
+	res := c.wrapped.HGetAll(key)
 	return c.wrapResult(res)
 }
 
