@@ -45,6 +45,9 @@ func TestSSE(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("some") != "some" {
+			t.Error("It should send header")
+		}
 		flusher, err := w.(http.Flusher)
 		if !err {
 			t.Error("Unexpected error")
@@ -71,7 +74,7 @@ func TestSSE(t *testing.T) {
 	var result RawEvent
 	mutextTest := sync.RWMutex{}
 	go func() {
-		err := mockedClient.Do(nil, nil, func(e RawEvent) {
+		err := mockedClient.Do(nil, map[string]string{"some": "some"}, func(e RawEvent) {
 			mutextTest.Lock()
 			result = e
 			mutextTest.Unlock()
