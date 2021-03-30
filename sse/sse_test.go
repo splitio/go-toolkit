@@ -3,7 +3,6 @@ package sse
 import (
 	"errors"
 	"fmt"
-	//"log"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -16,7 +15,7 @@ import (
 func TestSSEErrorConnecting(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
 	client, _ := NewClient("", 120, logger)
-	err := client.Do(make(map[string]string), func(e RawEvent) { t.Error("It should not execute anything") })
+	err := client.Do(make(map[string]string), make(map[string]string), func(e RawEvent) { t.Error("It should not execute anything") })
 	asErrConecting := &ErrConnectionFailed{}
 	if !errors.As(err, &asErrConecting) {
 		t.Errorf("Unexpected type of error: %+v", err)
@@ -34,7 +33,7 @@ func TestSSEErrorConnecting(t *testing.T) {
 	}
 	mockedClient.lifecycle.Setup()
 
-	err = mockedClient.Do(make(map[string]string), func(e RawEvent) {
+	err = mockedClient.Do(make(map[string]string), make(map[string]string), func(e RawEvent) {
 		t.Error("Should not execute callback")
 	})
 	if !errors.As(err, &asErrConecting) {
@@ -72,7 +71,7 @@ func TestSSE(t *testing.T) {
 	var result RawEvent
 	mutextTest := sync.RWMutex{}
 	go func() {
-		err := mockedClient.Do(nil, func(e RawEvent) {
+		err := mockedClient.Do(nil, nil, func(e RawEvent) {
 			mutextTest.Lock()
 			result = e
 			mutextTest.Unlock()
@@ -121,7 +120,7 @@ func TestStopBlock(t *testing.T) {
 
 	waiter := make(chan struct{}, 1)
 	go func() {
-		err := mockedClient.Do(make(map[string]string), func(e RawEvent) {})
+		err := mockedClient.Do(make(map[string]string), make(map[string]string), func(e RawEvent) {})
 		if err != nil {
 			t.Error("sse client ended in error: ", err)
 		}
@@ -160,7 +159,7 @@ func TestConnectionEOF(t *testing.T) {
 	}
 	mockedClient.lifecycle.Setup()
 
-	err := mockedClient.Do(make(map[string]string), func(e RawEvent) {})
+	err := mockedClient.Do(make(map[string]string), make(map[string]string), func(e RawEvent) {})
 	if err != ErrReadingStream {
 		t.Error("Should have triggered an ErrorReadingStreamError. Got: ", err)
 	}
