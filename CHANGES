@@ -1,4 +1,7 @@
-4.1.0 (March 16, 2021) -- 2.2.0 for non-modules
+4.2.0 (March 30, 2021)
+ - Added headers into SSE.
+
+4.1.0 (March 16, 2021)
  - Added HIncrBy, HGetAll for redis.
 
 4.0.0 (Feb 25th, 2021) -- 2.1.4 for non-modules
