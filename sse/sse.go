@@ -94,11 +94,16 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 		return &ErrConnectionFailed{wrapped: fmt.Errorf("error building request: %w", err)}
 	}
 
+	l.logger.Debug("[GET] ", req.URL.String())
+	l.logger.Debug(fmt.Sprintf("Headers: %v", req.Header))
+
 	resp, err := l.client.Do(req)
 	if err != nil {
+		l.logger.Error("Error performing get: ", req.URL.String(), err.Error())
 		return &ErrConnectionFailed{wrapped: fmt.Errorf("error issuing request: %w", err)}
 	}
 	if resp.StatusCode != 200 {
+		l.logger.Error(fmt.Sprintf("GET method: Status Code: %d - %s", resp.StatusCode, resp.Status))
 		return &ErrConnectionFailed{wrapped: fmt.Errorf("sse request status code: %d", resp.StatusCode)}
 	}
 	defer resp.Body.Close()
