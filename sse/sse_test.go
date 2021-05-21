@@ -3,7 +3,6 @@ package sse
 import (
 	"errors"
 	"fmt"
-	//"log"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -15,7 +14,7 @@ import (
 
 func TestSSEErrorConnecting(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
-	client, _ := NewClient("", 120, logger)
+	client, _ := NewClient("", 120, 10, logger)
 	err := client.Do(make(map[string]string), func(e RawEvent) { t.Error("It should not execute anything") })
 	asErrConecting := &ErrConnectionFailed{}
 	if !errors.As(err, &asErrConecting) {
@@ -90,6 +89,54 @@ func TestSSE(t *testing.T) {
 		t.Error("Unexpected result: ", result.Data())
 	}
 	mutextTest.RUnlock()
+}
+
+func TestSSENoTimeout(t *testing.T) {
+	logger := logging.NewLogger(&logging.LoggerOptions{})
+
+	mutexTest := sync.RWMutex{}
+
+	mutexTest.Lock()
+	finished := false
+	mutexTest.Unlock()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		flusher, err := w.(http.Flusher)
+		if !err {
+			t.Error("Unexpected error")
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+
+		fmt.Fprintf(w, "data: %s\n\n", `{"id":"YCh53QfLxO:0:0","data":"some","timestamp":1591911770828}`)
+		flusher.Flush()
+		time.Sleep(2 * time.Second)
+		mutexTest.Lock()
+		finished = true
+		mutexTest.Unlock()
+	}))
+	defer ts.Close()
+
+	clientSSE, _ := NewClient(ts.URL, 70, 1, logger)
+
+	go func() {
+		clientSSE.Do(nil, func(e RawEvent) {})
+	}()
+
+	time.Sleep(1500 * time.Millisecond)
+	mutexTest.RLock()
+	if finished {
+		t.Error("It should not be finished")
+	}
+	mutexTest.RUnlock()
+	time.Sleep(1500 * time.Millisecond)
+	mutexTest.RLock()
+	if !finished {
+		t.Error("It should be finished")
+	}
+	mutexTest.RUnlock()
+	clientSSE.Shutdown(true)
 }
 
 func TestStopBlock(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -32,15 +33,24 @@ type Client struct {
 }
 
 // NewClient creates new SSEClient
-func NewClient(url string, timeout int, logger logging.LoggerInterface) (*Client, error) {
-	if timeout < 1 {
-		return nil, errors.New("Timeout should be higher than 0")
+func NewClient(url string, keepAlive int, dialTimeout int, logger logging.LoggerInterface) (*Client, error) {
+	if keepAlive < 1 {
+		return nil, errors.New("keepAlive timeout should be higher than 0")
+	}
+	if dialTimeout < 0 {
+		dialTimeout = 0
+	}
+
+	transport := &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout: time.Duration(dialTimeout) * time.Second,
+		}).DialContext,
 	}
 
 	client := &Client{
 		url:     url,
-		client:  http.Client{},
-		timeout: time.Duration(timeout) * time.Second,
+		client:  http.Client{Transport: transport},
+		timeout: time.Duration(keepAlive) * time.Second,
 		logger:  logger,
 	}
 	client.lifecycle.Setup()

@@ -1,3 +1,6 @@
+4.0.1 (May 24th, 2021)
+ - Added timeouts on dialing SSE.
+
 4.0.0 (Feb 25th, 2021)
  - SSE Revamp
  - Lifecycle component (workerpool, sse & asynctask now depend on it)
