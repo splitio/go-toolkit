@@ -15,10 +15,6 @@ import (
 )
 
 const (
-	statusIdle = iota
-	statusRunning
-	statusShuttingDown
-
 	endOfLineChar = '\n'
 	endOfLineStr  = "\n"
 )
@@ -83,7 +79,7 @@ func (l *Client) readEvents(in *bufio.Reader, out chan<- RawEvent) {
 }
 
 // Do starts streaming
-func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
+func (l *Client) Do(params map[string]string, headers map[string]string, callback func(e RawEvent)) error {
 
 	if !l.lifecycle.BeginInitialization() {
 		return ErrNotIdle
@@ -99,7 +95,7 @@ func (l *Client) Do(params map[string]string, callback func(e RawEvent)) error {
 		l.lifecycle.ShutdownComplete()
 	}()
 
-	req, err := l.buildCancellableRequest(ctx, params)
+	req, err := l.buildCancellableRequest(ctx, params, headers)
 	if err != nil {
 		return &ErrConnectionFailed{wrapped: fmt.Errorf("error building request: %w", err)}
 	}
@@ -172,7 +168,7 @@ func (l *Client) Shutdown(blocking bool) {
 	}
 }
 
-func (l *Client) buildCancellableRequest(ctx context.Context, params map[string]string) (*http.Request, error) {
+func (l *Client) buildCancellableRequest(ctx context.Context, params map[string]string, headers map[string]string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", l.url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error instantiating request: %w", err)
@@ -182,6 +178,9 @@ func (l *Client) buildCancellableRequest(ctx context.Context, params map[string]
 
 	for key, value := range params {
 		query.Add(key, value)
+	}
+	for key, value := range headers {
+		req.Header.Set(key, value)
 	}
 	req.URL.RawQuery = query.Encode()
 	req.Header.Set("Accept", "text/event-stream")

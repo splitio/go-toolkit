@@ -15,7 +15,7 @@ import (
 func TestSSEErrorConnecting(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
 	client, _ := NewClient("", 120, 10, logger)
-	err := client.Do(make(map[string]string), func(e RawEvent) { t.Error("It should not execute anything") })
+	err := client.Do(make(map[string]string), make(map[string]string), func(e RawEvent) { t.Error("It should not execute anything") })
 	asErrConecting := &ErrConnectionFailed{}
 	if !errors.As(err, &asErrConecting) {
 		t.Errorf("Unexpected type of error: %+v", err)
@@ -33,7 +33,7 @@ func TestSSEErrorConnecting(t *testing.T) {
 	}
 	mockedClient.lifecycle.Setup()
 
-	err = mockedClient.Do(make(map[string]string), func(e RawEvent) {
+	err = mockedClient.Do(make(map[string]string), make(map[string]string), func(e RawEvent) {
 		t.Error("Should not execute callback")
 	})
 	if !errors.As(err, &asErrConecting) {
@@ -45,6 +45,9 @@ func TestSSE(t *testing.T) {
 	logger := logging.NewLogger(&logging.LoggerOptions{})
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("some") != "some" {
+			t.Error("It should send header")
+		}
 		flusher, err := w.(http.Flusher)
 		if !err {
 			t.Error("Unexpected error")
@@ -71,7 +74,7 @@ func TestSSE(t *testing.T) {
 	var result RawEvent
 	mutextTest := sync.RWMutex{}
 	go func() {
-		err := mockedClient.Do(nil, func(e RawEvent) {
+		err := mockedClient.Do(nil, map[string]string{"some": "some"}, func(e RawEvent) {
 			mutextTest.Lock()
 			result = e
 			mutextTest.Unlock()
@@ -121,7 +124,7 @@ func TestSSENoTimeout(t *testing.T) {
 	clientSSE, _ := NewClient(ts.URL, 70, 1, logger)
 
 	go func() {
-		clientSSE.Do(nil, func(e RawEvent) {})
+		clientSSE.Do(nil, make(map[string]string), func(e RawEvent) {})
 	}()
 
 	time.Sleep(1500 * time.Millisecond)
@@ -168,7 +171,7 @@ func TestStopBlock(t *testing.T) {
 
 	waiter := make(chan struct{}, 1)
 	go func() {
-		err := mockedClient.Do(make(map[string]string), func(e RawEvent) {})
+		err := mockedClient.Do(make(map[string]string), make(map[string]string), func(e RawEvent) {})
 		if err != nil {
 			t.Error("sse client ended in error: ", err)
 		}
@@ -207,7 +210,7 @@ func TestConnectionEOF(t *testing.T) {
 	}
 	mockedClient.lifecycle.Setup()
 
-	err := mockedClient.Do(make(map[string]string), func(e RawEvent) {})
+	err := mockedClient.Do(make(map[string]string), make(map[string]string), func(e RawEvent) {})
 	if err != ErrReadingStream {
 		t.Error("Should have triggered an ErrorReadingStreamError. Got: ", err)
 	}

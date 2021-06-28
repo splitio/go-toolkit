@@ -8,15 +8,16 @@ import (
 
 // MockResultOutput mocks struct
 type MockResultOutput struct {
-	ErrCall            func() error
-	IntCall            func() int64
-	StringCall         func() string
-	BoolCall           func() bool
-	DurationCall       func() time.Duration
-	ResultCall         func() (int64, error)
-	ResultStringCall   func() (string, error)
-	MultiCall          func() ([]string, error)
-	MultiInterfaceCall func() ([]interface{}, error)
+	ErrCall             func() error
+	IntCall             func() int64
+	StringCall          func() string
+	BoolCall            func() bool
+	DurationCall        func() time.Duration
+	ResultCall          func() (int64, error)
+	ResultStringCall    func() (string, error)
+	MultiCall           func() ([]string, error)
+	MultiInterfaceCall  func() ([]interface{}, error)
+	MapStringStringCall func() (map[string]string, error)
 }
 
 // Int mocks Int
@@ -64,6 +65,11 @@ func (m *MockResultOutput) MultiInterface() ([]interface{}, error) {
 	return m.MultiInterfaceCall()
 }
 
+// MapStringString mocks MapStringString
+func (m *MockResultOutput) MapStringString() (map[string]string, error) {
+	return m.MapStringStringCall()
+}
+
 // MockClient mocks for testing purposes
 type MockClient struct {
 	DelCall       func(keys ...string) redis.Result
@@ -87,6 +93,8 @@ type MockClient struct {
 	MGetCall      func(keys []string) redis.Result
 	SCardCall     func(key string) redis.Result
 	EvalCall      func(script string, keys []string, args ...interface{}) redis.Result
+	HIncrByCall   func(key string, field string, value int64) redis.Result
+	HGetAllCall   func(key string) redis.Result
 }
 
 // Del mocks get
@@ -192,4 +200,14 @@ func (m *MockClient) SCard(key string) redis.Result {
 // Eval mocks Eval
 func (m *MockClient) Eval(script string, keys []string, args ...interface{}) redis.Result {
 	return m.EvalCall(script, keys, args...)
+}
+
+// HIncrByCall mocks HIncrByCall
+func (m *MockClient) HIncrBy(key string, field string, value int64) redis.Result {
+	return m.HIncrByCall(key, field, value)
+}
+
+// HGetAll mocks HGetAll
+func (m *MockClient) HGetAll(key string) redis.Result {
+	return m.HGetAllCall(key)
 }
