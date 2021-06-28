@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -28,15 +29,24 @@ type Client struct {
 }
 
 // NewClient creates new SSEClient
-func NewClient(url string, timeout int, logger logging.LoggerInterface) (*Client, error) {
-	if timeout < 1 {
-		return nil, errors.New("Timeout should be higher than 0")
+func NewClient(url string, keepAlive int, dialTimeout int, logger logging.LoggerInterface) (*Client, error) {
+	if keepAlive < 1 {
+		return nil, errors.New("keepAlive timeout should be higher than 0")
+	}
+	if dialTimeout < 0 {
+		dialTimeout = 0
+	}
+
+	transport := &http.Transport{
+		DialContext: (&net.Dialer{
+			Timeout: time.Duration(dialTimeout) * time.Second,
+		}).DialContext,
 	}
 
 	client := &Client{
 		url:     url,
-		client:  http.Client{},
-		timeout: time.Duration(timeout) * time.Second,
+		client:  http.Client{Transport: transport},
+		timeout: time.Duration(keepAlive) * time.Second,
 		logger:  logger,
 	}
 	client.lifecycle.Setup()
@@ -90,11 +100,16 @@ func (l *Client) Do(params map[string]string, headers map[string]string, callbac
 		return &ErrConnectionFailed{wrapped: fmt.Errorf("error building request: %w", err)}
 	}
 
+	l.logger.Debug("[GET] ", req.URL.String())
+	l.logger.Debug(fmt.Sprintf("Headers: %v", req.Header))
+
 	resp, err := l.client.Do(req)
 	if err != nil {
+		l.logger.Error("Error performing get: ", req.URL.String(), err.Error())
 		return &ErrConnectionFailed{wrapped: fmt.Errorf("error issuing request: %w", err)}
 	}
 	if resp.StatusCode != 200 {
+		l.logger.Error(fmt.Sprintf("GET method: Status Code: %d - %s", resp.StatusCode, resp.Status))
 		return &ErrConnectionFailed{wrapped: fmt.Errorf("sse request status code: %d", resp.StatusCode)}
 	}
 	defer resp.Body.Close()
