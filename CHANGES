@@ -8,7 +8,7 @@
  - Streaming revamp
     - Fixed race condition on certain Streaming errors in order to properly fallback to Streaming.
     - Added few improvements in Synchronization cycle.
-    - Added Lifecycle component to track workerpool, sse & asynctask statusses (idle, starting, running).
+    - Added Lifecycle component to track Workerpool, SSE & Asynctask statusses (idle, starting, running).
 
 3.0.0 (Sep 21, 2020)
  - Added suport for go-modules.
