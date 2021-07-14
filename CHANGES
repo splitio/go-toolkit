@@ -5,14 +5,16 @@
  - Added HIncrBy, HGetAll for redis.
 
 4.0.0 (Feb 25th, 2021) -- 2.1.4 for non-modules
- - SSE Revamp
- - Lifecycle component (workerpool, sse & asynctask now depend on it)
+ - Streaming revamp
+    - Fixed race condition on certain Streaming errors in order to properly fallback to Streaming.
+    - Added few improvements in Synchronization cycle.
+    - Added Lifecycle component to track Workerpool, SSE & Asynctask statusses (idle, starting, running).
 
 3.0.0 (Sep 21, 2020)
  - Added suport for go-modules.
 
 2.1.3 (Sep 08, 2020)
- - Fix EOF handling in SSE connection.
+ - Fixed EOF handling in SSE connection.
 
 2.1.2 (Aug 31, 2020)
  - Added prefix with levels.
