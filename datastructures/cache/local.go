@@ -51,7 +51,7 @@ func (c *LocalCacheImpl) Get(key string) (interface{}, error) {
 		)
 	}
 
-	if time.Now().Sub(ttl) > c.ttl {
+	if time.Now().UnixNano() > ttl.UnixNano() {
 		return nil, &Expired{Key: key, Value: entry.value, When: ttl.Add(c.ttl)}
 	}
 
@@ -81,8 +81,8 @@ func (c *LocalCacheImpl) Set(key string, value interface{}) error {
 
 		ptr := c.lru.PushFront(entry{key: key, value: value})
 		c.items[key] = ptr
-		c.ttls[key] = time.Now()
 	}
+	c.ttls[key] = time.Now().Add(c.ttl)
 	return nil
 }
 
