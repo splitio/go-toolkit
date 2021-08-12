@@ -1,6 +1,7 @@
 4.2.2 (Aug 9, 2021)
  - Added compression algorithms utility.
  - Added encoding utility.
+ - Added BoolSlice structure.
 
 4.2.1 (Jun 28, 2021)
  - Added timeouts on dialing SSE.
