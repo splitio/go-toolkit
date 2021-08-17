@@ -2,6 +2,7 @@
  - Added compression algorithms utility.
  - Added encoding utility.
  - Added BoolSlice structure.
+ - Added Logger mocks.
 
 4.2.1 (Jun 28, 2021)
  - Added timeouts on dialing SSE.
