@@ -39,11 +39,6 @@ func Int64FromRef(number *int64) int64 {
 	return *number
 }
 
-// Int64Value kept to prevent breaking change. TODO: Deprecate in v4
-func Int64Value(number *int64) int64 {
-	return Int64FromRef(number)
-}
-
 // Float64Ref returns ref
 func Float64Ref(number float64) *float64 {
 	return &number
