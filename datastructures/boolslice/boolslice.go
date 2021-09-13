@@ -26,6 +26,12 @@ func NewBoolSlice(size int) (*BoolSlice, error) {
 
 // Rebuild generates new BoolSlice from data
 func Rebuild(size int, data []byte) (*BoolSlice, error) {
+	if size%8 != 0 {
+		return nil, errors.New("size must be a multiple of 8")
+	}
+	if data == nil {
+		return nil, errors.New("data cannot be empty")
+	}
 	return &BoolSlice{
 		raw:  data,
 		size: size,

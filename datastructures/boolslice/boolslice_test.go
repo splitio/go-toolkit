@@ -80,4 +80,38 @@ func TestBoolSlice(t *testing.T) {
 	if v, _ := b.Get(i1); v {
 		t.Error("It should not match after cleared", i1)
 	}
+
+	if _, err := Rebuild(1, nil); err.Error() != "size must be a multiple of 8" {
+		t.Error("It should return err")
+	}
+
+	if _, err := Rebuild(8, nil); err.Error() != "data cannot be empty" {
+		t.Error("It should return err")
+	}
+
+	rebuilt, err := Rebuild(int(math.Pow(2, 15)), b.Bytes())
+	if err != nil {
+		t.Error("It should not return err")
+	}
+	if v, _ := rebuilt.Get(i2); !v {
+		t.Error("It should match", i2)
+	}
+	if v, _ := rebuilt.Get(i3); !v {
+		t.Error("It should match", i3)
+	}
+	if v, _ := rebuilt.Get(i4); !v {
+		t.Error("It should match", i4)
+	}
+	if v, _ := rebuilt.Get(i5); !v {
+		t.Error("It should match", i5)
+	}
+	if v, _ := rebuilt.Get(i1); v {
+		t.Error("It should not match 12")
+	}
+	if v, _ := rebuilt.Get(200); v {
+		t.Error("It should not match 200")
+	}
+	if v, _ := rebuilt.Get(5000); v {
+		t.Error("It should not match 5000")
+	}
 }
