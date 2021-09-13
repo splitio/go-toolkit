@@ -1,9 +1,11 @@
 5.0.0 (Jul 26, 2021)
  - Added timeouts on dialing SSE.
- - Fixed local cache ttl
- - Removed deprecated helpers
+ - Fixed local cache ttl.
+ - Removed deprecated helpers.
  - Added compression algorithms utility.
  - Added encoding utility.
+ - Added BoolSlice structure.
+ - Added Logger mocks.
 
 4.2.0 (March 30, 2021)
  - Added headers into SSE.
