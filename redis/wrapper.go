@@ -9,6 +9,9 @@ import (
 
 // ===== Command output / return value types
 
+// Nil represents the redis nil value
+const Nil = redis.Nil
+
 // Result generic interface
 type Result interface {
 	Int() int64
