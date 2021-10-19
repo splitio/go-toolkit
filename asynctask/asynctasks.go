@@ -59,7 +59,7 @@ func (t *AsyncTask) Start() {
 			err := t.onInit(t.logger)
 			if err != nil { // If something goes wrong during initialization, abort.
 				if t.logger != nil {
-					t.logger.Error(err.Error())
+					t.logger.Error(fmt.Sprintf("task '%s' initialization failed: %s", t.name, err.Error()))
 				}
 				t.lifecycle.AbnormalShutdown()
 				return
@@ -87,7 +87,7 @@ func (t *AsyncTask) Start() {
 			// Run the wrapped task and handle the returned error if any.
 			err := t.task(t.logger)
 			if err != nil && t.logger != nil {
-				t.logger.Error(err.Error())
+				t.logger.Error(fmt.Sprintf("task '%s' failed with error: %s", t.name, err.Error()))
 			}
 
 			// Resetting timer
