@@ -156,9 +156,19 @@ func (p *PrefixedRedisClient) HIncrBy(key string, field string, value int64) (in
 	return p.Client.HIncrBy(p.withPrefix(key), field, value).Result()
 }
 
+// HSet implements HGetAll wrapper for redis
+func (p *PrefixedRedisClient) HSet(key string, hashKey string, value interface{}) error {
+	return p.Client.HSet(p.withPrefix(key), hashKey, value).Err()
+}
+
 // HGetAll implements HGetAll wrapper for redis
 func (p *PrefixedRedisClient) HGetAll(key string) (map[string]string, error) {
 	return p.Client.HGetAll(p.withPrefix(key)).MapStringString()
+}
+
+// Type implements Type wrapper for redis with prefix
+func (p *PrefixedRedisClient) Type(key string) (string, error) {
+	return p.Client.Type(p.withPrefix(key)).ResultString()
 }
 
 // NewPrefixedRedisClient returns a new Prefixed Redis Client

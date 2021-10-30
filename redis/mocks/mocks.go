@@ -95,6 +95,8 @@ type MockClient struct {
 	EvalCall      func(script string, keys []string, args ...interface{}) redis.Result
 	HIncrByCall   func(key string, field string, value int64) redis.Result
 	HGetAllCall   func(key string) redis.Result
+	HSetCall      func(key string, hashKey string, value interface{}) redis.Result
+	TypeCall      func(key string) redis.Result
 }
 
 // Del mocks get
@@ -202,7 +204,7 @@ func (m *MockClient) Eval(script string, keys []string, args ...interface{}) red
 	return m.EvalCall(script, keys, args...)
 }
 
-// HIncrByCall mocks HIncrByCall
+// HIncrBy mocks HIncrByCall
 func (m *MockClient) HIncrBy(key string, field string, value int64) redis.Result {
 	return m.HIncrByCall(key, field, value)
 }
@@ -210,4 +212,14 @@ func (m *MockClient) HIncrBy(key string, field string, value int64) redis.Result
 // HGetAll mocks HGetAll
 func (m *MockClient) HGetAll(key string) redis.Result {
 	return m.HGetAllCall(key)
+}
+
+// HSet implements HGetAll wrapper for redis
+func (m *MockClient) HSet(key string, hashKey string, value interface{}) redis.Result {
+	return m.HSetCall(key, hashKey, value)
+}
+
+// Type implements Type wrapper for redis with prefix
+func (m *MockClient) Type(key string) redis.Result {
+	return m.TypeCall(key)
 }

@@ -114,7 +114,9 @@ type Client interface {
 	SCard(key string) Result
 	Eval(script string, keys []string, args ...interface{}) Result
 	HIncrBy(key string, field string, value int64) Result
+	HSet(key string, hashKey string, value interface{}) Result
 	HGetAll(key string) Result
+	Type(key string) Result
 }
 
 // ClientImpl wrapps redis client
@@ -308,9 +310,21 @@ func (c *ClientImpl) HIncrBy(key string, field string, value int64) Result {
 	return c.wrapResult(res)
 }
 
+// HSet implements HSet wrapper for redis
+func (c *ClientImpl) HSet(key string, hashKey string, value interface{}) Result {
+	res := c.wrapped.HSet(context.TODO(), key, hashKey, value)
+	return c.wrapResult(res)
+}
+
 // HGetAll implements HGetAll wrapper for redis
 func (c *ClientImpl) HGetAll(key string) Result {
 	res := c.wrapped.HGetAll(context.TODO(), key)
+	return c.wrapResult(res)
+}
+
+// Type implements Type wrapper for redis
+func (c *ClientImpl) Type(key string) Result {
+	res := c.wrapped.Type(context.TODO(), key)
 	return c.wrapResult(res)
 }
 
