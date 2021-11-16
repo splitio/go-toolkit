@@ -70,6 +70,30 @@ func (m *MockResultOutput) MapStringString() (map[string]string, error) {
 	return m.MapStringStringCall()
 }
 
+// MpockPipeline  impl
+type MockPipeline struct {
+	LRangeCall func(key string, start, stop int64)
+	LTrimCall  func(key string, start, stop int64)
+	LLenCall   func(key string)
+	ExecCall   func() ([]redis.Result, error)
+}
+
+func (m *MockPipeline) LRange(key string, start, stop int64) {
+	m.LRangeCall(key, start, stop)
+}
+
+func (m *MockPipeline) LTrim(key string, start, stop int64) {
+	m.LTrimCall(key, start, stop)
+}
+
+func (m *MockPipeline) LLen(key string) {
+	m.LLenCall(key)
+}
+
+func (m *MockPipeline) Exec() ([]redis.Result, error) {
+	return m.ExecCall()
+}
+
 // MockClient mocks for testing purposes
 type MockClient struct {
 	DelCall       func(keys ...string) redis.Result
@@ -97,6 +121,7 @@ type MockClient struct {
 	HGetAllCall   func(key string) redis.Result
 	HSetCall      func(key string, hashKey string, value interface{}) redis.Result
 	TypeCall      func(key string) redis.Result
+	PipelineCall  func() redis.Pipeline
 }
 
 // Del mocks get
@@ -222,4 +247,9 @@ func (m *MockClient) HSet(key string, hashKey string, value interface{}) redis.R
 // Type implements Type wrapper for redis with prefix
 func (m *MockClient) Type(key string) redis.Result {
 	return m.TypeCall(key)
+}
+
+// Pipeline mock
+func (m *MockClient) Pipeline() redis.Pipeline {
+	return m.PipelineCall()
 }
