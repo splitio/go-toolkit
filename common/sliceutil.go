@@ -16,3 +16,18 @@ func Partition(items []string, maxItems int) [][]string {
 
 	return splitted
 }
+
+// DedupeStringSlice returns a new slice without duplicate strings
+func DedupeStringSlice(items []string) []string {
+	present := make(map[string]struct{}, len(items))
+	for idx := range items {
+		present[items[idx]] = struct{}{}
+	}
+
+	ret := make([]string, 0, len(present))
+	for key := range present {
+		ret = append(ret, key)
+	}
+
+	return ret
+}
