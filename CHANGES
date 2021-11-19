@@ -6,6 +6,7 @@
  - Added encoding utility.
  - Added BoolSlice structure.
  - Added Logger mocks.
+ - Added Redis pipeline support
 
 4.2.0 (March 30, 2021)
  - Added headers into SSE.
