@@ -3,7 +3,7 @@ package mocks
 import (
 	"time"
 
-	"github.com/splitio/go-toolkit/v4/redis"
+	"github.com/splitio/go-toolkit/v5/redis"
 )
 
 // MockResultOutput mocks struct
@@ -70,6 +70,30 @@ func (m *MockResultOutput) MapStringString() (map[string]string, error) {
 	return m.MapStringStringCall()
 }
 
+// MpockPipeline  impl
+type MockPipeline struct {
+	LRangeCall func(key string, start, stop int64)
+	LTrimCall  func(key string, start, stop int64)
+	LLenCall   func(key string)
+	ExecCall   func() ([]redis.Result, error)
+}
+
+func (m *MockPipeline) LRange(key string, start, stop int64) {
+	m.LRangeCall(key, start, stop)
+}
+
+func (m *MockPipeline) LTrim(key string, start, stop int64) {
+	m.LTrimCall(key, start, stop)
+}
+
+func (m *MockPipeline) LLen(key string) {
+	m.LLenCall(key)
+}
+
+func (m *MockPipeline) Exec() ([]redis.Result, error) {
+	return m.ExecCall()
+}
+
 // MockClient mocks for testing purposes
 type MockClient struct {
 	DelCall       func(keys ...string) redis.Result
@@ -95,6 +119,9 @@ type MockClient struct {
 	EvalCall      func(script string, keys []string, args ...interface{}) redis.Result
 	HIncrByCall   func(key string, field string, value int64) redis.Result
 	HGetAllCall   func(key string) redis.Result
+	HSetCall      func(key string, hashKey string, value interface{}) redis.Result
+	TypeCall      func(key string) redis.Result
+	PipelineCall  func() redis.Pipeline
 }
 
 // Del mocks get
@@ -202,7 +229,7 @@ func (m *MockClient) Eval(script string, keys []string, args ...interface{}) red
 	return m.EvalCall(script, keys, args...)
 }
 
-// HIncrByCall mocks HIncrByCall
+// HIncrBy mocks HIncrByCall
 func (m *MockClient) HIncrBy(key string, field string, value int64) redis.Result {
 	return m.HIncrByCall(key, field, value)
 }
@@ -210,4 +237,19 @@ func (m *MockClient) HIncrBy(key string, field string, value int64) redis.Result
 // HGetAll mocks HGetAll
 func (m *MockClient) HGetAll(key string) redis.Result {
 	return m.HGetAllCall(key)
+}
+
+// HSet implements HGetAll wrapper for redis
+func (m *MockClient) HSet(key string, hashKey string, value interface{}) redis.Result {
+	return m.HSetCall(key, hashKey, value)
+}
+
+// Type implements Type wrapper for redis with prefix
+func (m *MockClient) Type(key string) redis.Result {
+	return m.TypeCall(key)
+}
+
+// Pipeline mock
+func (m *MockClient) Pipeline() redis.Pipeline {
+	return m.PipelineCall()
 }

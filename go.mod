@@ -1,4 +1,4 @@
-module github.com/splitio/go-toolkit/v4
+module github.com/splitio/go-toolkit/v5
 
 go 1.13
 
