@@ -17,6 +17,35 @@ func (p *PrefixedRedisClient) Prefix() string {
 	return p.prefix
 }
 
+// ClusterMode returns true if the client is working in cluster mode
+func (p *PrefixedRedisClient) ClusterMode() bool {
+	return p.client.ClusterMode()
+}
+
+// ClusterSlotForKey returns the slot for the supplied key
+func (p *PrefixedRedisClient) ClusterSlotForKey(key string) (int64, error) {
+	return p.client.ClusterSlotForKey(withPrefix(p.prefix, key)).Result()
+}
+
+// ClusterCountKeysInSlot returns the number of keys in slot
+func (p *PrefixedRedisClient) ClusterCountKeysInSlot(slot int) (int64, error) {
+	return p.client.ClusterCountKeysInSlot(slot).Result()
+}
+
+// ClusterKeysInSlot returns all the keys in the supplied slot
+func (p *PrefixedRedisClient) ClusterKeysInSlot(slot int, count int) ([]string, error) {
+	keys, err := p.client.ClusterKeysInSlot(slot, count).Multi()
+	if err != nil {
+		return nil, err
+	}
+
+	woPrefix := make([]string, len(keys))
+	for index, key := range keys {
+		woPrefix[index] = withoutPrefix(p.prefix, key)
+	}
+	return woPrefix, nil
+}
+
 // Get wraps around redis get method by adding prefix and returning string and error directly
 func (p *PrefixedRedisClient) Get(key string) (string, error) {
 	return p.client.Get(withPrefix(p.prefix, key)).ResultString()
