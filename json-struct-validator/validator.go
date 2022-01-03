@@ -86,7 +86,6 @@ func ValidateConfiguration(p interface{}, s []byte) error {
 
 	var structToInspect = p
 	if reflect.ValueOf(p).Type().Kind() == reflect.Ptr {
-		//structToInspect = reflect.New(reflect.TypeOf(p)).Elem().Interface()
 		structToInspect = reflect.Indirect(reflect.ValueOf(p)).Interface()
 	}
 	primaryFieldList := getFieldsForStruct(structToInspect)
