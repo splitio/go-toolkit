@@ -1,5 +1,8 @@
+5.0.2 (Jan 03, 2021)
+ - Allow forcing a redis cluster when specifying a single node
+
 5.0.1 (Dic 23, 2021)
- - Added support for redis cluster specifying a single endpoint
+ - Retracted (wrong tag)
 
 5.0.0 (Jul 26, 2021)
  - Added timeouts on dialing SSE.
