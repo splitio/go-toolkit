@@ -84,7 +84,11 @@ func ValidateConfiguration(p interface{}, s []byte) error {
 		return errors.New("no configuration provided")
 	}
 
-	primaryFieldList := getFieldsForStruct(p)
+	var structToInspect = p
+	if reflect.ValueOf(p).Type().Kind() == reflect.Ptr {
+		structToInspect = reflect.Indirect(reflect.ValueOf(p)).Interface()
+	}
+	primaryFieldList := getFieldsForStruct(structToInspect)
 	primarySet := set.NewSet()
 	for _, c := range primaryFieldList {
 		primarySet.Add(c)

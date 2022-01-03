@@ -135,6 +135,10 @@ func (p *PipelineImpl) Exec() ([]Result, error) {
 
 // Client interface which specifies the currently used subset of redis operations
 type Client interface {
+	ClusterMode() bool
+	ClusterCountKeysInSlot(slot int) Result
+	ClusterSlotForKey(key string) Result
+	ClusterKeysInSlot(slot int, count int) Result
 	Del(keys ...string) Result
 	Exists(keys ...string) Result
 	Get(key string) Result
@@ -165,7 +169,31 @@ type Client interface {
 
 // ClientImpl wrapps redis client
 type ClientImpl struct {
-	wrapped redis.UniversalClient
+	wrapped     redis.UniversalClient
+	clusterMode bool
+}
+
+// ClusterMode returns true if the client is running in cluster mode
+func (c *ClientImpl) ClusterMode() bool {
+	return c.clusterMode
+}
+
+// ClusterSlotForKey returns the slot for the supplied key
+func (c *ClientImpl) ClusterSlotForKey(key string) Result {
+	res := c.wrapped.ClusterKeySlot(context.TODO(), key)
+	return wrapResult(res)
+}
+
+// ClusterCountKeysInSlot returns the number of keys in slot
+func (c *ClientImpl) ClusterCountKeysInSlot(slot int) Result {
+	res := c.wrapped.ClusterCountKeysInSlot(context.TODO(), slot)
+	return wrapResult(res)
+}
+
+// ClusterKeysInSlot returns all the keys in the supplied slot
+func (c *ClientImpl) ClusterKeysInSlot(slot int, count int) Result {
+	res := c.wrapped.ClusterGetKeysInSlot(context.TODO(), slot, count)
+	return wrapResult(res)
 }
 
 // Del implements Del wrapper for redis
@@ -327,7 +355,8 @@ func (c *ClientImpl) Pipeline() Pipeline {
 // NewClient returns new client implementation
 func NewClient(options *UniversalOptions) (Client, error) {
 	return &ClientImpl{
-		wrapped: redis.NewUniversalClient(options),
+		wrapped:     redis.NewUniversalClient(options),
+		clusterMode: len(options.Addrs) > 1 && options.MasterName == "",
 	}, nil
 }
 

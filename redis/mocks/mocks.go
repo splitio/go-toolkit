@@ -96,32 +96,52 @@ func (m *MockPipeline) Exec() ([]redis.Result, error) {
 
 // MockClient mocks for testing purposes
 type MockClient struct {
-	DelCall       func(keys ...string) redis.Result
-	GetCall       func(key string) redis.Result
-	SetCall       func(key string, value interface{}, expiration time.Duration) redis.Result
-	PingCall      func() redis.Result
-	ExistsCall    func(keys ...string) redis.Result
-	KeysCall      func(pattern string) redis.Result
-	SMembersCall  func(key string) redis.Result
-	SIsMemberCall func(key string, member interface{}) redis.Result
-	SAddCall      func(key string, members ...interface{}) redis.Result
-	SRemCall      func(key string, members ...interface{}) redis.Result
-	IncrCall      func(key string) redis.Result
-	DecrCall      func(key string) redis.Result
-	RPushCall     func(key string, values ...interface{}) redis.Result
-	LRangeCall    func(key string, start, stop int64) redis.Result
-	LTrimCall     func(key string, start, stop int64) redis.Result
-	LLenCall      func(key string) redis.Result
-	ExpireCall    func(key string, value time.Duration) redis.Result
-	TTLCall       func(key string) redis.Result
-	MGetCall      func(keys []string) redis.Result
-	SCardCall     func(key string) redis.Result
-	EvalCall      func(script string, keys []string, args ...interface{}) redis.Result
-	HIncrByCall   func(key string, field string, value int64) redis.Result
-	HGetAllCall   func(key string) redis.Result
-	HSetCall      func(key string, hashKey string, value interface{}) redis.Result
-	TypeCall      func(key string) redis.Result
-	PipelineCall  func() redis.Pipeline
+	ClusterModeCall            func() bool
+	ClusterCountKeysInSlotCall func(slot int) redis.Result
+	ClusterSlotForKeyCall      func(key string) redis.Result
+	ClusterKeysInSlotCall      func(slot int, count int) redis.Result
+	DelCall                    func(keys ...string) redis.Result
+	GetCall                    func(key string) redis.Result
+	SetCall                    func(key string, value interface{}, expiration time.Duration) redis.Result
+	PingCall                   func() redis.Result
+	ExistsCall                 func(keys ...string) redis.Result
+	KeysCall                   func(pattern string) redis.Result
+	SMembersCall               func(key string) redis.Result
+	SIsMemberCall              func(key string, member interface{}) redis.Result
+	SAddCall                   func(key string, members ...interface{}) redis.Result
+	SRemCall                   func(key string, members ...interface{}) redis.Result
+	IncrCall                   func(key string) redis.Result
+	DecrCall                   func(key string) redis.Result
+	RPushCall                  func(key string, values ...interface{}) redis.Result
+	LRangeCall                 func(key string, start, stop int64) redis.Result
+	LTrimCall                  func(key string, start, stop int64) redis.Result
+	LLenCall                   func(key string) redis.Result
+	ExpireCall                 func(key string, value time.Duration) redis.Result
+	TTLCall                    func(key string) redis.Result
+	MGetCall                   func(keys []string) redis.Result
+	SCardCall                  func(key string) redis.Result
+	EvalCall                   func(script string, keys []string, args ...interface{}) redis.Result
+	HIncrByCall                func(key string, field string, value int64) redis.Result
+	HGetAllCall                func(key string) redis.Result
+	HSetCall                   func(key string, hashKey string, value interface{}) redis.Result
+	TypeCall                   func(key string) redis.Result
+	PipelineCall               func() redis.Pipeline
+}
+
+func (m *MockClient) ClusterMode() bool {
+	return m.ClusterModeCall()
+}
+
+func (m *MockClient) ClusterCountKeysInSlot(slot int) redis.Result {
+	return m.ClusterCountKeysInSlotCall(slot)
+}
+
+func (m *MockClient) ClusterSlotForKey(key string) redis.Result {
+	return m.ClusterSlotForKeyCall(key)
+}
+
+func (m *MockClient) ClusterKeysInSlot(slot int, count int) redis.Result {
+	return m.ClusterKeysInSlotCall(slot, count)
 }
 
 // Del mocks get
