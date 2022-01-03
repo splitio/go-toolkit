@@ -354,8 +354,13 @@ func (c *ClientImpl) Pipeline() Pipeline {
 
 // NewClient returns new client implementation
 func NewClient(options *UniversalOptions) (Client, error) {
-	return &ClientImpl{
-		wrapped:     redis.NewUniversalClient(options),
+	if options.ForceClusterMode {
+		return &ClientImpl{wrapped: redis.NewClusterClient(options.toRedisClusterOpts()),
+			clusterMode: true,
+		}, nil
+	}
+
+	return &ClientImpl{wrapped: redis.NewUniversalClient(options.toRedisUniversalOpts()),
 		clusterMode: len(options.Addrs) > 1 && options.MasterName == "",
 	}, nil
 }
