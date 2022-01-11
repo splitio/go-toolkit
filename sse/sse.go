@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -37,11 +36,8 @@ func NewClient(url string, keepAlive int, dialTimeout int, logger logging.Logger
 		dialTimeout = 0
 	}
 
-	transport := &http.Transport{
-		DialContext: (&net.Dialer{
-			Timeout: time.Duration(dialTimeout) * time.Second,
-		}).DialContext,
-	}
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = http.ProxyFromEnvironment
 
 	client := &Client{
 		url:     url,
