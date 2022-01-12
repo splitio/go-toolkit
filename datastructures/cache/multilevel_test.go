@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -9,16 +10,16 @@ import (
 )
 
 type LayerMock struct {
-	getCall func(key string) (interface{}, error)
-	setCall func(key string, value interface{}) error
+	getCall func(ctx context.Context, key string) (interface{}, error)
+	setCall func(ctx context.Context, key string, value interface{}) error
 }
 
-func (m *LayerMock) Get(key string) (interface{}, error) {
-	return m.getCall(key)
+func (m *LayerMock) Get(ctx context.Context, key string) (interface{}, error) {
+	return m.getCall(ctx, key)
 }
 
-func (m *LayerMock) Set(key string, value interface{}) error {
-	return m.setCall(key, value)
+func (m *LayerMock) Set(ctx context.Context, key string, value interface{}) error {
+	return m.setCall(ctx, key, value)
 }
 
 type callTracker struct {
@@ -35,12 +36,14 @@ func (c *callTracker) track(name string) { c.calls[name]++ }
 func (c *callTracker) reset() { c.calls = make(map[string]int) }
 
 func (c *callTracker) checkCall(name string, count int) {
+	c.t.Helper()
 	if c.calls[name] != count {
-		c.t.Errorf("calls for '%s' should be %d", name, count)
+		c.t.Errorf("calls for '%s' should be %d. is: %d", name, count, c.calls[name])
 	}
 }
 
 func (c *callTracker) checkTotalCalls(count int) {
+	c.t.Helper()
 	if len(c.calls) != count {
 		c.t.Errorf("The nomber of total calls should be '%d' and is '%d'", count, len(c.calls))
 	}
@@ -53,7 +56,7 @@ func TestMultiLevelCache(t *testing.T) {
 	// Bottom layer fails if key1 or 2 are requested, has key 3. returns Miss if any other key is requested
 	calls := newCallTracker(t)
 	topLayer := &LayerMock{
-		getCall: func(key string) (interface{}, error) {
+		getCall: func(ctx context.Context, key string) (interface{}, error) {
 			calls.track(fmt.Sprintf("top:get:%s", key))
 			switch key {
 			case "key1":
@@ -66,7 +69,7 @@ func TestMultiLevelCache(t *testing.T) {
 				return nil, errors.New("someError")
 			}
 		},
-		setCall: func(key string, value interface{}) error {
+		setCall: func(ctx context.Context, key string, value interface{}) error {
 			calls.track(fmt.Sprintf("top:set:%s", key))
 			switch key {
 			case "key1":
@@ -84,7 +87,7 @@ func TestMultiLevelCache(t *testing.T) {
 	}
 
 	midLayer := &LayerMock{
-		getCall: func(key string) (interface{}, error) {
+		getCall: func(ctx context.Context, key string) (interface{}, error) {
 			calls.track(fmt.Sprintf("mid:get:%s", key))
 			switch key {
 			case "key1":
@@ -96,7 +99,7 @@ func TestMultiLevelCache(t *testing.T) {
 				return nil, &Miss{Where: "layer2", Key: key}
 			}
 		},
-		setCall: func(key string, value interface{}) error {
+		setCall: func(ctx context.Context, key string, value interface{}) error {
 			calls.track(fmt.Sprintf("mid:set:%s", key))
 			switch key {
 			case "key1":
@@ -112,7 +115,7 @@ func TestMultiLevelCache(t *testing.T) {
 	}
 
 	bottomLayer := &LayerMock{
-		getCall: func(key string) (interface{}, error) {
+		getCall: func(ctx context.Context, key string) (interface{}, error) {
 			calls.track(fmt.Sprintf("bot:get:%s", key))
 			switch key {
 			case "key1":
@@ -127,7 +130,7 @@ func TestMultiLevelCache(t *testing.T) {
 				return nil, &Miss{Where: "layer3", Key: key}
 			}
 		},
-		setCall: func(key string, value interface{}) error {
+		setCall: func(ctx context.Context, key string, value interface{}) error {
 			calls.track(fmt.Sprintf("bot:set:%s", key))
 			switch key {
 			case "key1":
@@ -141,12 +144,12 @@ func TestMultiLevelCache(t *testing.T) {
 		},
 	}
 
-	cache := MultiLevelCacheImpl{
+	cacheML := MultiLevelCacheImpl{
 		logger: logging.NewLogger(nil),
-		layers: []Layer{topLayer, midLayer, bottomLayer},
+		layers: []MLCLayer{topLayer, midLayer, bottomLayer},
 	}
 
-	value1, err := cache.Get("key1")
+	value1, err := cacheML.Get(context.TODO(), "key1")
 	if err != nil {
 		t.Error("No error should have been returned. Got: ", err)
 	}
@@ -157,7 +160,7 @@ func TestMultiLevelCache(t *testing.T) {
 	calls.checkTotalCalls(1)
 
 	calls.reset()
-	value2, err := cache.Get("key2")
+	value2, err := cacheML.Get(context.TODO(), "key2")
 	if err != nil {
 		t.Error("No error should have been returned. Got: ", err)
 	}
@@ -170,7 +173,7 @@ func TestMultiLevelCache(t *testing.T) {
 	calls.checkTotalCalls(3)
 
 	calls.reset()
-	value3, err := cache.Get("key3")
+	value3, err := cacheML.Get(context.TODO(), "key3")
 	if err != nil {
 		t.Error("Error should be nil. Was: ", err)
 	}
@@ -186,7 +189,7 @@ func TestMultiLevelCache(t *testing.T) {
 	calls.checkTotalCalls(5)
 
 	calls.reset()
-	value4, err := cache.Get("key4")
+	value4, err := cacheML.Get(context.TODO(), "key4")
 	if err == nil {
 		t.Error("Error should be returned when getting nonexistant key.")
 	}

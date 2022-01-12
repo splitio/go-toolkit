@@ -1,33 +1,35 @@
 package cache
 
 import (
+	"context"
+
 	"github.com/splitio/go-toolkit/v5/logging"
 )
 
-// Layer is the interface that should be implemented for all caching structs to be used with this piece of code.
-type Layer interface {
-	Get(key string) (interface{}, error)
-	Set(key string, value interface{}) error
+// MLCLayer is the interface that should be implemented for all caching structs to be used with this piece of code.
+type MLCLayer interface {
+	Get(ctx context.Context, key string) (interface{}, error)
+	Set(ctx context.Context, key string, value interface{}) error
 }
 
 // MultiLevelCache bundles a list of ordered cache layers (upper -> lower)
 type MultiLevelCache interface {
-	Get(key string) (interface{}, error)
+	Get(ctx context.Context, key string) (interface{}, error)
 }
 
 // MultiLevelCacheImpl implements the MultiLevelCache interface
 type MultiLevelCacheImpl struct {
-	layers []Layer
+	layers []MLCLayer
 	logger logging.LoggerInterface
 }
 
 // Get returns the value of the requested key (if found) and populates upper levels with it
-func (c *MultiLevelCacheImpl) Get(key string) (interface{}, error) {
+func (c *MultiLevelCacheImpl) Get(ctx context.Context, key string) (interface{}, error) {
 	toUpdate := make([]int, 0, len(c.layers))
 	var item interface{}
 	var err error
 	for index, layer := range c.layers {
-		item, err = layer.Get(key)
+		item, err = layer.Get(ctx, key)
 		if err != nil {
 			switch err.(type) {
 			case *Miss:
@@ -54,7 +56,7 @@ func (c *MultiLevelCacheImpl) Get(key string) (interface{}, error) {
 	// Update upper layers if any
 	for _, index := range toUpdate {
 		if index < len(c.layers) { // Ignore any awkward index (if any)
-			err := c.layers[index].Set(key, item)
+			err := c.layers[index].Set(ctx, key, item)
 			if err != nil {
 				c.logger.Error(err)
 			}
@@ -64,7 +66,7 @@ func (c *MultiLevelCacheImpl) Get(key string) (interface{}, error) {
 }
 
 // NewMultiLevel creates and returns a new MultiLevelCache instance
-func NewMultiLevel(layers []Layer, logger logging.LoggerInterface) (*MultiLevelCacheImpl, error) {
+func NewMultiLevel(layers []MLCLayer, logger logging.LoggerInterface) (*MultiLevelCacheImpl, error) {
 	if logger == nil {
 		logger = logging.NewLogger(nil)
 	}
