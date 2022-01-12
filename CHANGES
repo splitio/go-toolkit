@@ -1,3 +1,7 @@
+5.0.3 (Jan 12, 2021)
+ - Cleanup cache datastructure & multi-level revamp to support contexts
+ - Fix HTTP-Proxy from env vars in sse client
+
 5.0.2 (Jan 03, 2021)
  - Allow forcing a redis cluster when specifying a single node
 
