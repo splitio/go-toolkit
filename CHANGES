@@ -1,3 +1,6 @@
+5.1.0 (Apr 6, 2022)
+ - Adding ExtendedLevelFilteredLoggerWrapper to improve performance parsing log calls parameters only if the set level applies
+
 5.0.3 (Jan 12, 2021)
  - Cleanup cache datastructure & multi-level revamp to support contexts
  - Fix HTTP-Proxy from env vars in sse client

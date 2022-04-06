@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -90,4 +91,49 @@ func Level(level string) int {
 		panic("Invalid log level " + level)
 	}
 	return l
+}
+
+// ExtendedLevelFilteredLoggerWrapper leveled logger improving message format performance
+type ExtendedLevelFilteredLoggerWrapper struct {
+	*LevelFilteredLoggerWrapper
+}
+
+// sprintf apply parameter function to parse the given message
+func (l *ExtendedLevelFilteredLoggerWrapper) sprintf(format string, params func() []interface{}) string {
+	return fmt.Sprintf(format, params()...)
+}
+
+// ErrorFn forwards error logging messages getting parameters from a function to improve performance
+func (l *ExtendedLevelFilteredLoggerWrapper) ErrorFn(format string, params paramsFn) {
+	if l.level >= LevelError {
+		l.delegate.Error(l.sprintf(format, params))
+	}
+}
+
+// WarningFn forwards warning logging messages getting parameters from a function to improve performance
+func (l *ExtendedLevelFilteredLoggerWrapper) WarningFn(format string, params paramsFn) {
+	if l.level >= LevelWarning {
+		l.delegate.Warning(l.sprintf(format, params))
+	}
+}
+
+// InfoFn forwards info logging messages getting parameters from a function to improve performance
+func (l *ExtendedLevelFilteredLoggerWrapper) InfoFn(format string, params paramsFn) {
+	if l.level >= LevelInfo {
+		l.delegate.Info(l.sprintf(format, params))
+	}
+}
+
+// DebugFn forwards debug logging messages getting parameters from a function to improve performance
+func (l *ExtendedLevelFilteredLoggerWrapper) DebugFn(format string, params paramsFn) {
+	if l.level >= LevelDebug {
+		l.delegate.Debug(l.sprintf(format, params))
+	}
+}
+
+// VerboseFn forwards verbose logging messages getting parameters from a function to improve performance
+func (l *ExtendedLevelFilteredLoggerWrapper) VerboseFn(format string, params paramsFn) {
+	if l.level >= LevelVerbose {
+		l.delegate.Verbose(l.sprintf(format, params))
+	}
 }
