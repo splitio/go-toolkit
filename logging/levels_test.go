@@ -255,3 +255,85 @@ func TestNoneLevel(t *testing.T) {
 		}
 	}
 }
+
+func writelog(logger *ExtendedLevelFilteredLoggerWrapper) {
+	logger.ErrorFn("hello %s", func() []interface{} { return []interface{}{"world"} })
+	logger.WarningFn("hello %s", func() []interface{} { return []interface{}{"world"} })
+	logger.InfoFn("hello %s", func() []interface{} { return []interface{}{"world"} })
+	logger.DebugFn("hello %s", func() []interface{} { return []interface{}{"world"} })
+	logger.VerboseFn("hello %s", func() []interface{} { return []interface{}{"world"} })
+}
+
+func assertWrites(t *testing.T, currentLevel string, delegate *mockedLogger, shouldBeCalled []string, shouldNotBeCalled []string) {
+	for _, level := range shouldBeCalled {
+		if !delegate.msgs[level] {
+			t.Errorf("Call to log level function \"%s\" should have been forwarded, current level=%s", level, currentLevel)
+		}
+	}
+
+	for _, level := range shouldNotBeCalled {
+		if delegate.msgs[level] {
+			t.Errorf("Call to log level function \"%s\" should NOT have been forwarded, current level=%s", level, currentLevel)
+		}
+	}
+}
+
+func TestExtendedLevelFilteredLogger(t *testing.T) {
+
+	delegate := &mockedLogger{}
+	delegate.reset()
+
+	logger := &ExtendedLevelFilteredLoggerWrapper{&LevelFilteredLoggerWrapper{
+		delegate: delegate,
+		level:    LevelError,
+	}}
+
+	t.Run("Error", func(t *testing.T) {
+		logger.level = LevelError
+		delegate.reset()
+		writelog(logger)
+		assertWrites(t, "ERROR", delegate, []string{"Error"}, []string{"Warning", "Info", "Debug", "Verbose"})
+	})
+
+	t.Run("Waring", func(t *testing.T) {
+		logger.level = LevelWarning
+		delegate.reset()
+		writelog(logger)
+		assertWrites(t, "WARNING", delegate, []string{"Error", "Warning"}, []string{"Info", "Debug", "Verbose"})
+	})
+
+	t.Run("Info", func(t *testing.T) {
+		logger.level = LevelInfo
+		delegate.reset()
+		writelog(logger)
+		assertWrites(t, "INFO", delegate, []string{"Error", "Warning", "Info"}, []string{"Debug", "Verbose"})
+	})
+
+	t.Run("Debug", func(t *testing.T) {
+		logger.level = LevelDebug
+		delegate.reset()
+		writelog(logger)
+		assertWrites(t, "DEBUG", delegate, []string{"Error", "Warning", "Info", "Debug"}, []string{"Verbose"})
+	})
+
+	t.Run("Verbose", func(t *testing.T) {
+		logger.level = LevelVerbose
+		delegate.reset()
+		writelog(logger)
+		assertWrites(t, "VERBOSE", delegate, []string{"Error", "Warning", "Info", "Debug", "Verbose"}, []string{})
+	})
+
+	t.Run("All", func(t *testing.T) {
+		logger.level = LevelAll
+		delegate.reset()
+		writelog(logger)
+		assertWrites(t, "ALL", delegate, []string{"Error", "Warning", "Info", "Debug", "Verbose"}, []string{})
+	})
+
+	t.Run("None", func(t *testing.T) {
+		logger.level = LevelNone
+		delegate.reset()
+		writelog(logger)
+		assertWrites(t, "NONE", delegate, []string{}, []string{"Error", "Warning", "Info", "Debug", "Verbose"})
+	})
+}

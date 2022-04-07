@@ -105,15 +105,15 @@ func normalizeOptions(options *LoggerOptions) *LoggerOptions {
 	return toRet
 }
 
-// NewLogger instantiates a new Logger instance. Requires a pointer to a LoggerOptions struct to be passed.
-func NewLogger(options *LoggerOptions) LoggerInterface {
-
-	options = normalizeOptions(options)
+// newLogger constructor of Logger instance.
+//  Returns: a pointer to *Logger
+//  Assumes: that options are alredy normalized
+func newLogger(options *LoggerOptions) *Logger {
 	prefix := ""
 	if options.Prefix != "" {
 		prefix = fmt.Sprintf("%s - ", options.Prefix)
 	}
-	logger := &Logger{
+	return &Logger{
 		debugLogger:   *log.New(options.DebugWriter, fmt.Sprintf("%sDEBUG - ", prefix), options.StandardLoggerFlags),
 		infoLogger:    *log.New(options.InfoWriter, fmt.Sprintf("%sINFO - ", prefix), options.StandardLoggerFlags),
 		warningLogger: *log.New(options.WarningWriter, fmt.Sprintf("%sWARNING - ", prefix), options.StandardLoggerFlags),
@@ -121,9 +121,30 @@ func NewLogger(options *LoggerOptions) LoggerInterface {
 		verboseLogger: *log.New(options.VerboseWriter, fmt.Sprintf("%sVERBOSE - ", prefix), options.StandardLoggerFlags),
 		framesToSkip:  3 + options.ExtraFramesToSkip,
 	}
+}
+
+// NewLogger instantiates a new Logger instance. Requires a pointer to a LoggerOptions struct to be passed.
+func NewLogger(options *LoggerOptions) LoggerInterface {
+
+	options = normalizeOptions(options)
+
+	logger := newLogger(options)
 
 	return &LevelFilteredLoggerWrapper{
 		delegate: logger,
 		level:    options.LogLevel,
 	}
+}
+
+// NewExtendedLogger instantiates a new Logger instance. Requires a pointer to a LoggerOptions struct to be passed.
+func NewExtendedLogger(options *LoggerOptions) ExtendedLoggerInterface {
+
+	options = normalizeOptions(options)
+
+	logger := newLogger(options)
+
+	return &ExtendedLevelFilteredLoggerWrapper{&LevelFilteredLoggerWrapper{
+		delegate: logger,
+		level:    options.LogLevel,
+	}}
 }
