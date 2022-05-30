@@ -8,7 +8,7 @@ import (
 func TestBackoff(t *testing.T) {
 	base := int64(10)
 	maxAllowed := 60 * time.Second
-	backoff := New(&base, &maxAllowed)
+	backoff := New(base, maxAllowed)
 	if backoff.base != base {
 		t.Error("It should be equals to 10")
 	}

@@ -19,8 +19,8 @@ type Interface interface {
 // Impl implements the Backoff interface
 type Impl struct {
 	base       int64
-	maxAllowed time.Duration
 	current    int64
+	maxAllowed time.Duration
 }
 
 // Next returns how long to wait and updates the current count
@@ -40,14 +40,14 @@ func (b *Impl) Reset() {
 }
 
 // New creates a new Backoffer
-func New(base *int64, maxAllowed *time.Duration) *Impl {
+func New(base int64, maxAllowed time.Duration) *Impl {
 	backoffBase := int64(2)
 	backoffMaxAllowed := maxAllowedWait
-	if base != nil && *base > 0 {
-		backoffBase = *base
+	if base > 0 {
+		backoffBase = base
 	}
-	if maxAllowed != nil && *maxAllowed > 0 {
-		backoffMaxAllowed = *maxAllowed
+	if maxAllowed.Seconds() > 0 {
+		backoffMaxAllowed = maxAllowed
 	}
 	return &Impl{base: backoffBase, maxAllowed: backoffMaxAllowed}
 }
