@@ -26,7 +26,7 @@ type Impl struct {
 // Next returns how long to wait and updates the current count
 func (b *Impl) Next() time.Duration {
 	current := atomic.LoadInt64(&b.current)
-	nextWait := time.Duration(float64(b.base)*(math.Pow(2, float64(current)))) * time.Second
+	nextWait := time.Duration(math.Pow(float64(b.base), float64(current))) * time.Second
 	atomic.AddInt64(&b.current, 1)
 	if nextWait > b.maxAllowed {
 		return b.maxAllowed
