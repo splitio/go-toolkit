@@ -1,3 +1,6 @@
+5.2.0 (June 6, 2022)
+ - Updated Backoff component to start backoff from zero. Added maximum allowed time to wait in calculation.
+
 5.1.0 (Apr 7, 2022)
  - Adding ExtendedLevelFilteredLoggerWrapper to improve performance parsing log calls parameters only if the set level applies
 
