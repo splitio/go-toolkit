@@ -228,6 +228,10 @@ func (p *PrefixedPipeline) Exec() ([]Result, error) {
 	return p.wrapped.Exec()
 }
 
+func (p *PrefixedPipeline) HIncrBy(key string, field string, value int64) {
+	p.wrapped.HIncrBy(key, field, value)
+}
+
 // withPrefix adds a prefix to the key if the prefix supplied has a length greater than 0
 func withPrefix(prefix string, key string) string {
 	if len(prefix) > 0 {
