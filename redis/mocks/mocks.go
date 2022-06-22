@@ -72,10 +72,11 @@ func (m *MockResultOutput) MapStringString() (map[string]string, error) {
 
 // MpockPipeline  impl
 type MockPipeline struct {
-	LRangeCall func(key string, start, stop int64)
-	LTrimCall  func(key string, start, stop int64)
-	LLenCall   func(key string)
-	ExecCall   func() ([]redis.Result, error)
+	LRangeCall  func(key string, start, stop int64)
+	LTrimCall   func(key string, start, stop int64)
+	LLenCall    func(key string)
+	HIncrByCall func(key string, field string, value int64)
+	ExecCall    func() ([]redis.Result, error)
 }
 
 func (m *MockPipeline) LRange(key string, start, stop int64) {
@@ -88,6 +89,10 @@ func (m *MockPipeline) LTrim(key string, start, stop int64) {
 
 func (m *MockPipeline) LLen(key string) {
 	m.LLenCall(key)
+}
+
+func (m *MockPipeline) HIncrBy(key string, field string, value int64) {
+	m.HIncrByCall(key, field, value)
 }
 
 func (m *MockPipeline) Exec() ([]redis.Result, error) {
