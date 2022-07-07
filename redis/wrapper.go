@@ -94,6 +94,7 @@ type Pipeline interface {
 	LTrim(key string, start, stop int64)
 	LLen(key string)
 	HIncrBy(key string, field string, value int64)
+	HLen(key string)
 	Exec() ([]Result, error)
 }
 
@@ -120,6 +121,11 @@ func (p *PipelineImpl) LLen(key string) {
 // HIncrBy schedules an hincrby operation on this pipeline
 func (p *PipelineImpl) HIncrBy(key string, field string, value int64) {
 	p.wrapped.HIncrBy(context.TODO(), key, field, value)
+}
+
+// HLen schedules an HLen operation on this pipeline
+func (p *PipelineImpl) HLen(key string) {
+	p.wrapped.HLen(context.TODO(), key)
 }
 
 // Exec executes the pipeline
