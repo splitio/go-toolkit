@@ -76,6 +76,7 @@ type MockPipeline struct {
 	LTrimCall   func(key string, start, stop int64)
 	LLenCall    func(key string)
 	HIncrByCall func(key string, field string, value int64)
+	HLenCall    func(key string)
 	ExecCall    func() ([]redis.Result, error)
 }
 
@@ -93,6 +94,10 @@ func (m *MockPipeline) LLen(key string) {
 
 func (m *MockPipeline) HIncrBy(key string, field string, value int64) {
 	m.HIncrByCall(key, field, value)
+}
+
+func (m *MockPipeline) HLen(key string) {
+	m.HLenCall(key)
 }
 
 func (m *MockPipeline) Exec() ([]redis.Result, error) {

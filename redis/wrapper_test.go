@@ -21,13 +21,14 @@ func TestRedisWrapperPipeline(t *testing.T) {
 	pipe.LTrim("key1", 2, -1)
 	pipe.HIncrBy("key-test", "field-test", 5)
 	pipe.HIncrBy("key-test", "field-test-2", 4)
+	pipe.HIncrBy("key-test", "field-test-2", 3)
 	pipe.HLen("key-test")
 	result, err := pipe.Exec()
 	if err != nil {
 		t.Error("there should not be any error. Got: ", err)
 	}
 
-	if len(result) != 6 {
+	if len(result) != 7 {
 		t.Error("there should be 4 elements")
 	}
 
@@ -41,7 +42,19 @@ func TestRedisWrapperPipeline(t *testing.T) {
 		t.Error("new length should be 1. Is: ", i)
 	}
 
-	if l := result[5].Int(); l != 2 {
+	if c := result[3].Int(); c != 5 {
+		t.Error("count should be 5. Is: ", c)
+	}
+
+	if c := result[4].Int(); c != 4 {
+		t.Error("count should be 5. Is: ", c)
+	}
+
+	if c := result[5].Int(); c != 7 {
+		t.Error("count should be 5. Is: ", c)
+	}
+
+	if l := result[6].Int(); l != 2 {
 		t.Error("hlen should be 2. is: ", l)
 	}
 
