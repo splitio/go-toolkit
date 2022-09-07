@@ -75,18 +75,6 @@ type digest32 struct {
 	h1 uint32 // Unfinalized running hash.
 }
 
-// New32 returns new 32-bit hasher
-func New32() hash.Hash32 { return New32WithSeed(0) }
-
-// New32WithSeed returns new 32-bit hasher set with explicit seed value
-func New32WithSeed(seed uint32) hash.Hash32 {
-	d := new(digest32)
-	d.seed = seed
-	d.bmixer = d
-	d.Reset()
-	return d
-}
-
 func (d *digest32) Size() int { return 4 }
 
 func (d *digest32) reset() { d.h1 = d.seed }
@@ -153,19 +141,12 @@ func rotl32(x uint32, r byte) uint32 {
 }
 */
 
-// Sum32 returns the MurmurHash3 sum of data. It is equivalent to the
-// following sequence (without the extra burden and the extra allocation):
-//     hasher := New32()
-//     hasher.Write(data)
-//     return hasher.Sum32()
-func Sum32(data []byte) uint32 { return Sum32WithSeed(data, 0) }
-
-// Sum32WithSeed returns the MurmurHash3 sum of data. It is equivalent to the
+// sum32WithSeed returns the MurmurHash3 sum of data. It is equivalent to the
 // following sequence (without the extra burden and the extra allocation):
 //     hasher := New32WithSeed(seed)
 //     hasher.Write(data)
 //     return hasher.Sum32()
-func Sum32WithSeed(data []byte, seed uint32) uint32 {
+func sum32WithSeed(data []byte, seed uint32) uint32 {
 
 	h1 := seed
 

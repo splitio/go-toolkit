@@ -12,10 +12,15 @@ type Murmur32Hasher struct {
 
 // Hash returns the murmur3 (32 bits) hash of a byte slice.
 func (h *Murmur32Hasher) Hash(data []byte) uint32 {
-	return Sum32WithSeed(data, h.seed)
+	return sum32WithSeed(data, h.seed)
 }
 
 // NewMurmur332Hasher returns a new instance of the Murmur32Hasher
 func NewMurmur332Hasher(seed uint32) *Murmur32Hasher {
 	return &Murmur32Hasher{seed: seed}
+}
+
+// Sum32WithSeed returns the MurmurHash3 sum of data
+func Sum32WithSeed(data []byte, seed uint32) uint32 {
+	return sum32WithSeed(data, seed)
 }
