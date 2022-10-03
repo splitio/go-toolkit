@@ -1,5 +1,5 @@
 5.2.2 (Oct 3, 2022)
- - Added `HIncrby` to Redis.
+ - Added `HIncrBy` and `HLen` operations to Redis.
 
 5.2.1 (Sep 8, 2022)
  - Replaced murmur3-32 library.
