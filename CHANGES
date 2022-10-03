@@ -1,3 +1,6 @@
+5.2.1 (Sep 8, 2022)
+ - Replaced murmur3-32 library.
+
 5.2.0 (June 6, 2022)
  - Updated Backoff component to start backoff from zero. Added maximum allowed time to wait in calculation.
 
