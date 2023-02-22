@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 )
 
 // ===== Command output / return value types
@@ -421,7 +421,7 @@ func wrapResult(result interface{}) Result {
 		return &ResultImpl{
 			err: v.Err(),
 		}
-	case *redis.StringStringMapCmd:
+	case *redis.MapStringStringCmd:
 		return &ResultImpl{
 			err:             v.Err(),
 			mapStringString: v.Val(),
