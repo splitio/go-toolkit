@@ -16,31 +16,30 @@ import (
 type UniversalOptions struct {
 
 	// Original go-redis.UniversalOptions properties
-	Addrs              []string
-	DB                 int
-	Dialer             func(ctx context.Context, network, addr string) (net.Conn, error)
-	OnConnect          func(ctx context.Context, cn *wredis.Conn) error
-	Username           string
-	Password           string
-	SentinelPassword   string
-	MaxRetries         int
-	MinRetryBackoff    time.Duration
-	MaxRetryBackoff    time.Duration
-	DialTimeout        time.Duration
-	ReadTimeout        time.Duration
-	WriteTimeout       time.Duration
-	PoolSize           int
-	MinIdleConns       int
-	MaxConnAge         time.Duration
-	PoolTimeout        time.Duration
-	IdleTimeout        time.Duration
-	IdleCheckFrequency time.Duration
-	TLSConfig          *tls.Config
-	MaxRedirects       int
-	ReadOnly           bool
-	RouteByLatency     bool
-	RouteRandomly      bool
-	MasterName         string
+	Addrs            []string
+	DB               int
+	Dialer           func(ctx context.Context, network, addr string) (net.Conn, error)
+	OnConnect        func(ctx context.Context, cn *wredis.Conn) error
+	Username         string
+	Password         string
+	SentinelPassword string
+	MaxRetries       int
+	MinRetryBackoff  time.Duration
+	MaxRetryBackoff  time.Duration
+	DialTimeout      time.Duration
+	ReadTimeout      time.Duration
+	WriteTimeout     time.Duration
+	PoolSize         int
+	MinIdleConns     int
+	ConnMaxLifetime  time.Duration
+	PoolTimeout      time.Duration
+	ConnMaxIdleTime  time.Duration
+	TLSConfig        *tls.Config
+	MaxRedirects     int
+	ReadOnly         bool
+	RouteByLatency   bool
+	RouteRandomly    bool
+	MasterName       string
 
 	// Custom properties
 	ForceClusterMode bool
@@ -63,9 +62,9 @@ func (u *UniversalOptions) toRedisUniversalOpts() *wredis.UniversalOptions {
 		WriteTimeout:     u.WriteTimeout,
 		PoolSize:         u.PoolSize,
 		MinIdleConns:     u.MinIdleConns,
-		ConnMaxLifetime:  u.MaxConnAge,
+		ConnMaxLifetime:  u.ConnMaxLifetime,
 		PoolTimeout:      u.PoolTimeout,
-		ConnMaxIdleTime:  u.IdleTimeout,
+		ConnMaxIdleTime:  u.ConnMaxIdleTime,
 		TLSConfig:        u.TLSConfig,
 		MaxRedirects:     u.MaxRedirects,
 		ReadOnly:         u.ReadOnly,
@@ -94,9 +93,9 @@ func (u *UniversalOptions) toRedisClusterOpts() *wredis.ClusterOptions {
 		WriteTimeout:    u.WriteTimeout,
 		PoolSize:        u.PoolSize,
 		MinIdleConns:    u.MinIdleConns,
-		ConnMaxLifetime: u.MaxConnAge,
+		ConnMaxLifetime: u.ConnMaxLifetime,
 		PoolTimeout:     u.PoolTimeout,
-		ConnMaxIdleTime: u.IdleTimeout,
+		ConnMaxIdleTime: u.ConnMaxIdleTime,
 		TLSConfig:       u.TLSConfig,
 	}
 }
