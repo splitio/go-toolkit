@@ -3,7 +3,7 @@ package redis
 import (
 	"testing"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/redis/go-redis/v9"
 	"github.com/splitio/go-toolkit/v5/testhelpers"
 )
 
