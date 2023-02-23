@@ -3,7 +3,7 @@ package testhelpers
 import (
 	"testing"
 
-	"github.com/splitio/go-toolkit/v6/datastructures/set"
+	"github.com/splitio/go-toolkit/v5/datastructures/set"
 )
 
 // AssertStringSliceEquals fails is two string slices are not identical

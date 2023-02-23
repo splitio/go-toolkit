@@ -2,10 +2,11 @@ package workerpool
 
 import (
 	"fmt"
-	"github.com/splitio/go-toolkit/v6/logging"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/splitio/go-toolkit/v5/logging"
 )
 
 var resMutex sync.RWMutex

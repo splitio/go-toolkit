@@ -3,7 +3,7 @@ package cache
 import (
 	"context"
 
-	"github.com/splitio/go-toolkit/v6/logging"
+	"github.com/splitio/go-toolkit/v5/logging"
 )
 
 // MLCLayer is the interface that should be implemented for all caching structs to be used with this piece of code.

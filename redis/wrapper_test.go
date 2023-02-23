@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/splitio/go-toolkit/v6/testhelpers"
+	"github.com/splitio/go-toolkit/v5/testhelpers"
 )
 
 func TestRedisWrapperPipeline(t *testing.T) {

@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/splitio/go-toolkit/v6/redis"
-	"github.com/splitio/go-toolkit/v6/redis/mocks"
+	"github.com/splitio/go-toolkit/v5/redis"
+	"github.com/splitio/go-toolkit/v5/redis/mocks"
 )
 
 func TestEnsureConnected(t *testing.T) {

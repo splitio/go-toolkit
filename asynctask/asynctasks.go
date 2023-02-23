@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/splitio/go-toolkit/v6/logging"
-	"github.com/splitio/go-toolkit/v6/struct/traits/lifecycle"
+	"github.com/splitio/go-toolkit/v5/logging"
+	"github.com/splitio/go-toolkit/v5/struct/traits/lifecycle"
 )
 
 // AsyncTask is a struct that wraps tasks that should run periodically and can be remotely stopped & started,

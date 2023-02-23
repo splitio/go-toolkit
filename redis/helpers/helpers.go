@@ -3,7 +3,7 @@ package helpers
 import (
 	"fmt"
 
-	"github.com/splitio/go-toolkit/v6/redis"
+	"github.com/splitio/go-toolkit/v5/redis"
 )
 
 const (
