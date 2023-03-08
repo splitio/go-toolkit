@@ -1,4 +1,4 @@
-5.3.0 (Feb X, 2023)
+5.3.0 (March 8, 2023)
  - Upgraded redis/go-redis to v9.
  - Fixed golang.org/x/net vulnerability (CVE-2022-27664).
 
