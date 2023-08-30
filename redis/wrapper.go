@@ -95,6 +95,11 @@ type Pipeline interface {
 	LLen(key string)
 	HIncrBy(key string, field string, value int64)
 	HLen(key string)
+	Set(key string, value interface{}, expiration time.Duration)
+	Incr(key string)
+	Decr(key string)
+	SAdd(key string, members ...interface{})
+	SRem(key string, members ...interface{})
 	Exec() ([]Result, error)
 }
 
@@ -126,6 +131,31 @@ func (p *PipelineImpl) HIncrBy(key string, field string, value int64) {
 // HLen schedules an HLen operation on this pipeline
 func (p *PipelineImpl) HLen(key string) {
 	p.wrapped.HLen(context.TODO(), key)
+}
+
+// Set schedules a Set operation on this pipeline
+func (p *PipelineImpl) Set(key string, value interface{}, expiration time.Duration) {
+	p.wrapped.Set(context.TODO(), key, value, expiration)
+}
+
+// Incr schedules an Incr operation on this pipeline
+func (p *PipelineImpl) Incr(key string) {
+	p.wrapped.Incr(context.TODO(), key)
+}
+
+// Decr schedules a Decr operation on this pipeline
+func (p *PipelineImpl) Decr(key string) {
+	p.wrapped.Decr(context.TODO(), key)
+}
+
+// SAdd schedules a SAdd operation on this pipeline
+func (p *PipelineImpl) SAdd(key string, members ...interface{}) {
+	p.wrapped.SAdd(context.TODO(), key, members...)
+}
+
+// SRem schedules a SRem operation on this pipeline
+func (p *PipelineImpl) SRem(key string, members ...interface{}) {
+	p.wrapped.SRem(context.TODO(), key, members...)
 }
 
 // Exec executes the pipeline

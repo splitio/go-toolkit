@@ -2,6 +2,7 @@ package redis
 
 import (
 	"testing"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/splitio/go-toolkit/v5/testhelpers"
@@ -13,6 +14,7 @@ func TestRedisWrapperPipeline(t *testing.T) {
 
 	client.Del("key1")
 	client.Del("key-test")
+	client.Del("key-set")
 	client.RPush("key1", "e1", "e2", "e3")
 
 	pipe := client.Pipeline()
@@ -23,13 +25,18 @@ func TestRedisWrapperPipeline(t *testing.T) {
 	pipe.HIncrBy("key-test", "field-test-2", 4)
 	pipe.HIncrBy("key-test", "field-test-2", 3)
 	pipe.HLen("key-test")
+	pipe.Set("key-set", "field-test-1", 1*time.Hour)
+	pipe.SAdd("key-sadd", []interface{}{"field-test-1", "field-test-2"})
+	pipe.SRem("key-sadd", []interface{}{"field-test-1", "field-test-2"})
+	pipe.Incr("key-incr")
+	pipe.Decr("key-incr")
 	result, err := pipe.Exec()
 	if err != nil {
 		t.Error("there should not be any error. Got: ", err)
 	}
 
-	if len(result) != 7 {
-		t.Error("there should be 4 elements")
+	if len(result) != 12 {
+		t.Error("there should be 12 elements")
 	}
 
 	items, _ := result[0].Multi()
@@ -60,5 +67,22 @@ func TestRedisWrapperPipeline(t *testing.T) {
 
 	if ib := client.HIncrBy("key-test", "field-test", 1); ib.Int() != 6 {
 		t.Error("new count should be 6")
+	}
+
+	if ib := client.Get("key-set"); ib.String() != "field-test-1" {
+		t.Error("it should be field-test-1")
+	}
+
+	if c := result[8].Int(); c != 2 {
+		t.Error("count should be 2. Is: ", c)
+	}
+	if c := result[9].Int(); c != 2 {
+		t.Error("count should be 2. Is: ", c)
+	}
+	if c := result[10].Int(); c != 1 {
+		t.Error("count should be 1. Is: ", c)
+	}
+	if c := result[11].Int(); c != 0 {
+		t.Error("count should be zero. Is: ", c)
 	}
 }

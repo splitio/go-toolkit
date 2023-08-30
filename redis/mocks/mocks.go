@@ -196,12 +196,12 @@ func (m *MockClient) SIsMember(key string, member interface{}) redis.Result {
 
 // SAdd mocks SAdd
 func (m *MockClient) SAdd(key string, members ...interface{}) redis.Result {
-	return m.SAddCall(key)
+	return m.SAddCall(key, members...)
 }
 
 // SRem mocks SRem
 func (m *MockClient) SRem(key string, members ...interface{}) redis.Result {
-	return m.SRemCall(key)
+	return m.SRemCall(key, members...)
 }
 
 // Incr mocks Incr

@@ -233,6 +233,31 @@ func (p *PrefixedPipeline) HLen(key string) {
 	p.wrapped.HLen(withPrefix(p.prefix, key))
 }
 
+// Set schedules a Set operation on this pipeline
+func (p *PrefixedPipeline) Set(key string, value interface{}, expiration time.Duration) {
+	p.wrapped.Set(withPrefix(p.prefix, key), value, expiration)
+}
+
+// Incr schedules an Incr operation on this pipeline
+func (p *PrefixedPipeline) Incr(key string) {
+	p.wrapped.Incr(withPrefix(p.prefix, key))
+}
+
+// Decr schedules a Decr operation on this pipeline
+func (p *PrefixedPipeline) Decr(key string) {
+	p.wrapped.Decr(withPrefix(p.prefix, key))
+}
+
+// SAdd schedules a SAdd operation on this pipeline
+func (p *PrefixedPipeline) SAdd(key string, members ...interface{}) {
+	p.wrapped.SAdd(withPrefix(p.prefix, key), members...)
+}
+
+// SRem schedules a SRem operation on this pipeline
+func (p *PrefixedPipeline) SRem(key string, members ...interface{}) {
+	p.wrapped.SRem(withPrefix(p.prefix, key), members...)
+}
+
 // Exec executes the pipeline
 func (p *PrefixedPipeline) Exec() ([]Result, error) {
 	return p.wrapped.Exec()
