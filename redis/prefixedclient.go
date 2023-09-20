@@ -258,6 +258,15 @@ func (p *PrefixedPipeline) SRem(key string, members ...interface{}) {
 	p.wrapped.SRem(withPrefix(p.prefix, key), members...)
 }
 
+// Del schedules a Del operation on this pipeline
+func (p *PrefixedPipeline) Del(keys ...string) {
+	prefixedKeys := make([]string, len(keys))
+	for i, k := range keys {
+		prefixedKeys[i] = withPrefix(p.prefix, k)
+	}
+	p.wrapped.Del(prefixedKeys...)
+}
+
 // Exec executes the pipeline
 func (p *PrefixedPipeline) Exec() ([]Result, error) {
 	return p.wrapped.Exec()

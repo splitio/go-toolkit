@@ -1,5 +1,5 @@
 5.3.1 ( XX, 2023)
- - Added Set, SAdd, SRem, Incr, Decr methods into Redis Pipeline.
+ - Added Set, SAdd, SRem, Incr, Decr, Del methods into Redis Pipeline.
  - Updated mocks SAdd, SRem to accept members parameters.
 
 5.3.0 (March 8, 2023)

@@ -82,6 +82,7 @@ type MockPipeline struct {
 	DecrCall    func(key string)
 	SAddCall    func(key string, members ...interface{})
 	SRemCall    func(key string, members ...interface{})
+	DelCall     func(keys ...string)
 	ExecCall    func() ([]redis.Result, error)
 }
 
@@ -123,6 +124,10 @@ func (m *MockPipeline) SAdd(key string, members ...interface{}) {
 
 func (m *MockPipeline) SRem(key string, members ...interface{}) {
 	m.SRemCall(key, members...)
+}
+
+func (m *MockPipeline) Del(keys ...string) {
+	m.DelCall(keys...)
 }
 
 func (m *MockPipeline) Exec() ([]redis.Result, error) {

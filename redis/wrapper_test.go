@@ -16,6 +16,8 @@ func TestRedisWrapperPipeline(t *testing.T) {
 	client.Del("key-test")
 	client.Del("key-set")
 	client.RPush("key1", "e1", "e2", "e3")
+	client.Set("key-del1", 0, 1*time.Hour)
+	client.Set("key-del2", 0, 1*time.Hour)
 
 	pipe := client.Pipeline()
 	pipe.LRange("key1", 0, 5)
@@ -30,13 +32,14 @@ func TestRedisWrapperPipeline(t *testing.T) {
 	pipe.SRem("key-sadd", []interface{}{"field-test-1", "field-test-2"})
 	pipe.Incr("key-incr")
 	pipe.Decr("key-incr")
+	pipe.Del([]string{"key-del1", "key-del2"}...)
 	result, err := pipe.Exec()
 	if err != nil {
 		t.Error("there should not be any error. Got: ", err)
 	}
 
-	if len(result) != 12 {
-		t.Error("there should be 12 elements")
+	if len(result) != 13 {
+		t.Error("there should be 13 elements")
 	}
 
 	items, _ := result[0].Multi()
@@ -84,5 +87,8 @@ func TestRedisWrapperPipeline(t *testing.T) {
 	}
 	if c := result[11].Int(); c != 0 {
 		t.Error("count should be zero. Is: ", c)
+	}
+	if c := result[12].Int(); c != 2 {
+		t.Error("count should be 2. Is: ", c)
 	}
 }

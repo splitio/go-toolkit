@@ -100,6 +100,7 @@ type Pipeline interface {
 	Decr(key string)
 	SAdd(key string, members ...interface{})
 	SRem(key string, members ...interface{})
+	Del(keys ...string)
 	Exec() ([]Result, error)
 }
 
@@ -156,6 +157,11 @@ func (p *PipelineImpl) SAdd(key string, members ...interface{}) {
 // SRem schedules a SRem operation on this pipeline
 func (p *PipelineImpl) SRem(key string, members ...interface{}) {
 	p.wrapped.SRem(context.TODO(), key, members...)
+}
+
+// Del schedules a Del operation on this pipeline
+func (p *PipelineImpl) Del(keys ...string) {
+	p.wrapped.Del(context.TODO(), keys...)
 }
 
 // Exec executes the pipeline
