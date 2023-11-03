@@ -72,18 +72,19 @@ func (m *MockResultOutput) MapStringString() (map[string]string, error) {
 
 // MpockPipeline  impl
 type MockPipeline struct {
-	LRangeCall  func(key string, start, stop int64)
-	LTrimCall   func(key string, start, stop int64)
-	LLenCall    func(key string)
-	HIncrByCall func(key string, field string, value int64)
-	HLenCall    func(key string)
-	SetCall     func(key string, value interface{}, expiration time.Duration)
-	IncrCall    func(key string)
-	DecrCall    func(key string)
-	SAddCall    func(key string, members ...interface{})
-	SRemCall    func(key string, members ...interface{})
-	DelCall     func(keys ...string)
-	ExecCall    func() ([]redis.Result, error)
+	LRangeCall   func(key string, start, stop int64)
+	LTrimCall    func(key string, start, stop int64)
+	LLenCall     func(key string)
+	HIncrByCall  func(key string, field string, value int64)
+	HLenCall     func(key string)
+	SetCall      func(key string, value interface{}, expiration time.Duration)
+	IncrCall     func(key string)
+	DecrCall     func(key string)
+	SAddCall     func(key string, members ...interface{})
+	SRemCall     func(key string, members ...interface{})
+	SMembersCall func(key string)
+	DelCall      func(keys ...string)
+	ExecCall     func() ([]redis.Result, error)
 }
 
 func (m *MockPipeline) LRange(key string, start, stop int64) {
@@ -124,6 +125,10 @@ func (m *MockPipeline) SAdd(key string, members ...interface{}) {
 
 func (m *MockPipeline) SRem(key string, members ...interface{}) {
 	m.SRemCall(key, members...)
+}
+
+func (m *MockPipeline) SMembers(key string) {
+	m.SMembers(key)
 }
 
 func (m *MockPipeline) Del(keys ...string) {

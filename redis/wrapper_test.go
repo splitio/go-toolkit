@@ -29,6 +29,7 @@ func TestRedisWrapperPipeline(t *testing.T) {
 	pipe.HLen("key-test")
 	pipe.Set("key-set", "field-test-1", 1*time.Hour)
 	pipe.SAdd("key-sadd", []interface{}{"field-test-1", "field-test-2"})
+	pipe.SMembers("key-sadd")
 	pipe.SRem("key-sadd", []interface{}{"field-test-1", "field-test-2"})
 	pipe.Incr("key-incr")
 	pipe.Decr("key-incr")
@@ -38,7 +39,7 @@ func TestRedisWrapperPipeline(t *testing.T) {
 		t.Error("there should not be any error. Got: ", err)
 	}
 
-	if len(result) != 13 {
+	if len(result) != 14 {
 		t.Error("there should be 13 elements")
 	}
 
@@ -79,16 +80,19 @@ func TestRedisWrapperPipeline(t *testing.T) {
 	if c := result[8].Int(); c != 2 {
 		t.Error("count should be 2. Is: ", c)
 	}
-	if c := result[9].Int(); c != 2 {
+	if d, _ := result[9].Multi(); len(d) != 2 {
+		t.Error("count should be 2. Is: ", len(d))
+	}
+	if c := result[10].Int(); c != 2 {
 		t.Error("count should be 2. Is: ", c)
 	}
-	if c := result[10].Int(); c != 1 {
+	if c := result[11].Int(); c != 1 {
 		t.Error("count should be 1. Is: ", c)
 	}
-	if c := result[11].Int(); c != 0 {
+	if c := result[12].Int(); c != 0 {
 		t.Error("count should be zero. Is: ", c)
 	}
-	if c := result[12].Int(); c != 2 {
+	if c := result[13].Int(); c != 2 {
 		t.Error("count should be 2. Is: ", c)
 	}
 }
