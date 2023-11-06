@@ -128,7 +128,7 @@ func (m *MockPipeline) SRem(key string, members ...interface{}) {
 }
 
 func (m *MockPipeline) SMembers(key string) {
-	m.SMembers(key)
+	m.SMembersCall(key)
 }
 
 func (m *MockPipeline) Del(keys ...string) {
