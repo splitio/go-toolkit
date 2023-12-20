@@ -189,6 +189,34 @@ func (p *PrefixedRedisClient) Type(key string) (string, error) {
 	return p.client.Type(withPrefix(p.prefix, key)).ResultString()
 }
 
+func (p *PrefixedRedisClient) Scan(match string, count int64) ([]string, error) {
+	var cursor uint64
+	toReturn := make([]string, 0)
+	for {
+		res := p.client.Scan(cursor, withPrefix(p.prefix, match), count)
+		if res.Err() != nil {
+			return nil, res.Err()
+		}
+
+		cursor = uint64(res.Int())
+
+		keys, err := res.Multi()
+		if err != nil {
+			return nil, err
+		}
+
+		for _, key := range keys {
+			toReturn = append(toReturn, withoutPrefix(p.prefix, key))
+		}
+
+		if cursor == 0 {
+			break
+		}
+	}
+
+	return toReturn, nil
+}
+
 // Pipeline wrapper
 func (p *PrefixedRedisClient) Pipeline() Pipeline {
 	return &PrefixedPipeline{wrapped: p.client.Pipeline(), prefix: p.prefix}

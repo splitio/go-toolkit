@@ -219,6 +219,7 @@ type Client interface {
 	HGetAll(key string) Result
 	Type(key string) Result
 	Pipeline() Pipeline
+	Scan(cursor uint64, match string, count int64) Result
 }
 
 // ClientImpl wrapps redis client
@@ -406,6 +407,12 @@ func (c *ClientImpl) Pipeline() Pipeline {
 	return &PipelineImpl{wrapped: res}
 }
 
+// Scan implements Scan wrapper for redis
+func (c *ClientImpl) Scan(cursor uint64, match string, count int64) Result {
+	res := c.wrapped.Scan(context.TODO(), cursor, match, count)
+	return wrapResult(res)
+}
+
 // NewClient returns new client implementation
 func NewClient(options *UniversalOptions) (Client, error) {
 	if options.ForceClusterMode {
@@ -467,6 +474,13 @@ func wrapResult(result interface{}) Result {
 		return &ResultImpl{
 			err:             v.Err(),
 			mapStringString: v.Val(),
+		}
+	case *redis.ScanCmd:
+		keys, cursor := v.Val()
+		return &ResultImpl{
+			err:   v.Err(),
+			multi: keys,
+			value: int64(cursor),
 		}
 	default:
 		return nil
