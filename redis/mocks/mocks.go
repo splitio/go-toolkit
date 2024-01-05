@@ -72,12 +72,19 @@ func (m *MockResultOutput) MapStringString() (map[string]string, error) {
 
 // MpockPipeline  impl
 type MockPipeline struct {
-	LRangeCall  func(key string, start, stop int64)
-	LTrimCall   func(key string, start, stop int64)
-	LLenCall    func(key string)
-	HIncrByCall func(key string, field string, value int64)
-	HLenCall    func(key string)
-	ExecCall    func() ([]redis.Result, error)
+	LRangeCall   func(key string, start, stop int64)
+	LTrimCall    func(key string, start, stop int64)
+	LLenCall     func(key string)
+	HIncrByCall  func(key string, field string, value int64)
+	HLenCall     func(key string)
+	SetCall      func(key string, value interface{}, expiration time.Duration)
+	IncrCall     func(key string)
+	DecrCall     func(key string)
+	SAddCall     func(key string, members ...interface{})
+	SRemCall     func(key string, members ...interface{})
+	SMembersCall func(key string)
+	DelCall      func(keys ...string)
+	ExecCall     func() ([]redis.Result, error)
 }
 
 func (m *MockPipeline) LRange(key string, start, stop int64) {
@@ -98,6 +105,34 @@ func (m *MockPipeline) HIncrBy(key string, field string, value int64) {
 
 func (m *MockPipeline) HLen(key string) {
 	m.HLenCall(key)
+}
+
+func (m *MockPipeline) Set(key string, value interface{}, expiration time.Duration) {
+	m.SetCall(key, value, expiration)
+}
+
+func (m *MockPipeline) Incr(key string) {
+	m.IncrCall(key)
+}
+
+func (m *MockPipeline) Decr(key string) {
+	m.DecrCall(key)
+}
+
+func (m *MockPipeline) SAdd(key string, members ...interface{}) {
+	m.SAddCall(key, members...)
+}
+
+func (m *MockPipeline) SRem(key string, members ...interface{}) {
+	m.SRemCall(key, members...)
+}
+
+func (m *MockPipeline) SMembers(key string) {
+	m.SMembersCall(key)
+}
+
+func (m *MockPipeline) Del(keys ...string) {
+	m.DelCall(keys...)
 }
 
 func (m *MockPipeline) Exec() ([]redis.Result, error) {
@@ -196,12 +231,12 @@ func (m *MockClient) SIsMember(key string, member interface{}) redis.Result {
 
 // SAdd mocks SAdd
 func (m *MockClient) SAdd(key string, members ...interface{}) redis.Result {
-	return m.SAddCall(key)
+	return m.SAddCall(key, members...)
 }
 
 // SRem mocks SRem
 func (m *MockClient) SRem(key string, members ...interface{}) redis.Result {
-	return m.SRemCall(key)
+	return m.SRemCall(key, members...)
 }
 
 // Incr mocks Incr
