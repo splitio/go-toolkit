@@ -1,3 +1,6 @@
+5.4.0 (Jan 10, 2024)
+- Added `Scan` operation to Redis
+
 5.3.2 (Nov 29, 2023)
  - Added Set, SAdd, SMembers, SRem, Incr, Decr, Del methods into Redis Pipeline.
  - Updated mocks SAdd, SRem to accept members parameters.
