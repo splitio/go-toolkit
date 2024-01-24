@@ -156,6 +156,8 @@ func (p *PrefixedRedisClient) MGet(keys []string) ([]interface{}, error) {
 	for _, key := range keys {
 		keysWithPrefix = append(keysWithPrefix, withPrefix(p.prefix, key))
 	}
+	fmt.Println("#### keysWithPrefix")
+	fmt.Println(keysWithPrefix)
 	return p.client.MGet(keysWithPrefix).MultiInterface()
 }
 
