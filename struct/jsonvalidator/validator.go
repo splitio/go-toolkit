@@ -1,4 +1,4 @@
-package validator
+package jsonvalidator
 
 import (
 	"encoding/json"
@@ -64,9 +64,9 @@ func getFieldsForMap(s map[string]interface{}) []string {
 	return getFieldsForMapRecursive("", s)
 }
 
-func validateParameters(userConf []string, p *set.ThreadUnsafeSet) error {
+func validateParameters(userConf []string, p set.Set[string]) error {
 	for _, field := range userConf {
-		if !p.Has(field) {
+		if !p.Contains(field) {
 			return errors.New(field)
 		}
 	}
@@ -89,7 +89,7 @@ func ValidateConfiguration(p interface{}, s []byte) error {
 		structToInspect = reflect.Indirect(reflect.ValueOf(p)).Interface()
 	}
 	primaryFieldList := getFieldsForStruct(structToInspect)
-	primarySet := set.NewSet()
+	primarySet := set.New[string](100)
 	for _, c := range primaryFieldList {
 		primarySet.Add(c)
 	}

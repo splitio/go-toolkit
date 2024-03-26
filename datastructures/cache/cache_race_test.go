@@ -1,6 +1,6 @@
 // +build !race
 
-package int64cache
+package cache
 
 import (
 	"math/rand"
@@ -10,7 +10,7 @@ import (
 
 func TestLocalCacheHighConcurrency(t *testing.T) {
 
-	c, err := NewInt64Cache(500)
+	c, err := NewSimpleLRU[int64, int64](500, NoTTL)
 	if err != nil {
 		t.Error("No error should have been returned. Got: ", err)
 	}

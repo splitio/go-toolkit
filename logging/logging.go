@@ -65,6 +65,31 @@ func (l *Logger) Error(msg ...interface{}) {
 	l.errorLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
 }
 
+// Verbose logs a message with Debug level
+func (l *Logger) Verbosef(f string, args ...interface{}) {
+	l.verboseLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
+}
+
+// Debug logs a message with Debug level
+func (l *Logger) Debugf(f string, args ...interface{}) {
+	l.debugLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
+}
+
+// Info logs a message with Info level
+func (l *Logger) Infof(f string, args ...interface{}) {
+	l.infoLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
+}
+
+// Warning logs a message with Warning level
+func (l *Logger) Warningf(f string, args ...interface{}) {
+	l.warningLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
+}
+
+// Error logs a message with Error level
+func (l *Logger) Errorf(f string, args ...interface{}) {
+	l.errorLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
+}
+
 func normalizeOptions(options *LoggerOptions) *LoggerOptions {
 	var toRet *LoggerOptions
 	if options == nil {

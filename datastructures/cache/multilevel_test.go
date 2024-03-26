@@ -10,15 +10,15 @@ import (
 )
 
 type LayerMock struct {
-	getCall func(ctx context.Context, key string) (interface{}, error)
-	setCall func(ctx context.Context, key string, value interface{}) error
+	getCall func(ctx context.Context, key string) (string, error)
+	setCall func(ctx context.Context, key string, value string) error
 }
 
-func (m *LayerMock) Get(ctx context.Context, key string) (interface{}, error) {
+func (m *LayerMock) Get(ctx context.Context, key string) (string, error) {
 	return m.getCall(ctx, key)
 }
 
-func (m *LayerMock) Set(ctx context.Context, key string, value interface{}) error {
+func (m *LayerMock) Set(ctx context.Context, key string, value string) error {
 	return m.setCall(ctx, key, value)
 }
 
@@ -56,20 +56,20 @@ func TestMultiLevelCache(t *testing.T) {
 	// Bottom layer fails if key1 or 2 are requested, has key 3. returns Miss if any other key is requested
 	calls := newCallTracker(t)
 	topLayer := &LayerMock{
-		getCall: func(ctx context.Context, key string) (interface{}, error) {
+		getCall: func(ctx context.Context, key string) (string, error) {
 			calls.track(fmt.Sprintf("top:get:%s", key))
 			switch key {
 			case "key1":
 				return "value1", nil
 			case "key2":
-				return nil, &Miss{Where: "layer1", Key: "key2"}
+				return "", &Miss{Where: "layer1", Key: "key2"}
 			case "key3":
-				return nil, &Expired{Key: "key3", Value: "someOtherValue"}
+				return "", &Expired{Key: "key3", Value: "someOtherValue"}
 			default:
-				return nil, errors.New("someError")
+				return "", errors.New("someError")
 			}
 		},
-		setCall: func(ctx context.Context, key string, value interface{}) error {
+		setCall: func(ctx context.Context, key string, value string) error {
 			calls.track(fmt.Sprintf("top:set:%s", key))
 			switch key {
 			case "key1":
@@ -87,19 +87,19 @@ func TestMultiLevelCache(t *testing.T) {
 	}
 
 	midLayer := &LayerMock{
-		getCall: func(ctx context.Context, key string) (interface{}, error) {
+		getCall: func(ctx context.Context, key string) (string, error) {
 			calls.track(fmt.Sprintf("mid:get:%s", key))
 			switch key {
 			case "key1":
 				t.Error("Get should not be called on the mid layer for key1")
-				return nil, nil
+				return "", nil
 			case "key2":
 				return "value2", nil
 			default:
-				return nil, &Miss{Where: "layer2", Key: key}
+				return "", &Miss{Where: "layer2", Key: key}
 			}
 		},
-		setCall: func(ctx context.Context, key string, value interface{}) error {
+		setCall: func(ctx context.Context, key string, value string) error {
 			calls.track(fmt.Sprintf("mid:set:%s", key))
 			switch key {
 			case "key1":
@@ -115,22 +115,22 @@ func TestMultiLevelCache(t *testing.T) {
 	}
 
 	bottomLayer := &LayerMock{
-		getCall: func(ctx context.Context, key string) (interface{}, error) {
+		getCall: func(ctx context.Context, key string) (string, error) {
 			calls.track(fmt.Sprintf("bot:get:%s", key))
 			switch key {
 			case "key1":
 				t.Error("Get should not be called on the mid layer for key1")
-				return nil, nil
+				return "", nil
 			case "key2":
 				t.Error("Get should not be called on the mid layer for key1")
-				return nil, nil
+				return "", nil
 			case "key3":
 				return "value3", nil
 			default:
-				return nil, &Miss{Where: "layer3", Key: key}
+				return "", &Miss{Where: "layer3", Key: key}
 			}
 		},
-		setCall: func(ctx context.Context, key string, value interface{}) error {
+		setCall: func(ctx context.Context, key string, value string) error {
 			calls.track(fmt.Sprintf("bot:set:%s", key))
 			switch key {
 			case "key1":
@@ -144,9 +144,9 @@ func TestMultiLevelCache(t *testing.T) {
 		},
 	}
 
-	cacheML := MultiLevelCacheImpl{
+	cacheML := MultiLevelCacheImpl[string, string]{
 		logger: logging.NewLogger(nil),
-		layers: []MLCLayer{topLayer, midLayer, bottomLayer},
+		layers: []MLCLayer[string, string]{topLayer, midLayer, bottomLayer},
 	}
 
 	value1, err := cacheML.Get(context.TODO(), "key1")
@@ -203,7 +203,7 @@ func TestMultiLevelCache(t *testing.T) {
 		t.Errorf("Incorrect 'Where' or 'Key'. Got: %+v", asMiss)
 	}
 
-	if value4 != nil {
+	if value4 != "" {
 		t.Errorf("Value returned for GET 'key4' should be nil. Is: %+v", value4)
 	}
 	calls.checkCall("top:get:key4", 1)

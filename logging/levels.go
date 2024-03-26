@@ -76,6 +76,45 @@ func (l *LevelFilteredLoggerWrapper) Verbose(is ...interface{}) {
 	}
 }
 
+// Debugf implements LoggerInterface.
+func (l *LevelFilteredLoggerWrapper) Debugf(fmt string, args ...interface{}) {
+    if l.level >= LevelDebug {
+        l.delegate.Debugf(fmt, args...)
+    }
+}
+
+// Errorf implements LoggerInterface.
+func (l *LevelFilteredLoggerWrapper) Errorf(fmt string, args ...interface{}) {
+    if l.level >= LevelError {
+        l.delegate.Errorf(fmt, args...)
+    }
+}
+
+// Infof implements LoggerInterface.
+func (l *LevelFilteredLoggerWrapper) Infof(fmt string, args ...interface{}) {
+    if l.level >= LevelInfo {
+        l.delegate.Infof(fmt, args...)
+    }
+}
+
+// Verbosef implements LoggerInterface.
+func (l *LevelFilteredLoggerWrapper) Verbosef(fmt string, args ...interface{}) {
+    if l.level >= LevelVerbose {
+        l.delegate.Verbosef(fmt, args...)
+    }
+}
+
+// Warningf implements LoggerInterface.
+func (l *LevelFilteredLoggerWrapper) Warningf(fmt string, args ...interface{}) {
+    if l.level >= LevelWarning {
+        l.delegate.Warningf(fmt, args...)
+    }
+}
+
+
+
+var _ LoggerInterface = (*LevelFilteredLoggerWrapper)(nil)
+
 var levels map[string]int = map[string]int{
 	"ERROR":   LevelError,
 	"WARNING": LevelWarning,

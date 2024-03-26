@@ -133,7 +133,7 @@ func TestRefillPanic(t *testing.T) {
 }
 
 func TestCountWorksProperly(t *testing.T) {
-	cache := InMemoryQueueCacheOverlay{maxSize: 100}
+	cache := InMemoryQueueCacheOverlay[int]{maxSize: 100}
 
 	cache.readCursor = 0
 	cache.writeCursor = 0

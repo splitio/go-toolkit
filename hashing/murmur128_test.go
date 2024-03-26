@@ -1,14 +1,14 @@
 package hashing
 
 import (
-	"io/ioutil"
+    "os"
 	"strconv"
 	"strings"
 	"testing"
 )
 
 func TestMurmur128(t *testing.T) {
-	raw, err := ioutil.ReadFile("../../testfiles/murmur3_64_uuids.csv")
+	raw, err := os.ReadFile("../testdata/murmur3_64_uuids.csv")
 	if err != nil {
 		t.Error("error reading murmur128 test cases files: ", err.Error())
 	}

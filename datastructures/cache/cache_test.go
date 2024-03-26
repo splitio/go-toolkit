@@ -1,5 +1,3 @@
-// +build !race
-
 package cache
 
 import (
@@ -10,8 +8,8 @@ import (
 	"time"
 )
 
-func TestLocalCache(t *testing.T) {
-	cache, err := NewLocalCache(5, 1*time.Second)
+func TestSimpleCache(t *testing.T) {
+	cache, err := NewSimpleLRU[string, int](5, 1*time.Second)
 	if err != nil {
 		t.Error("No error should have been returned. Got: ", err)
 	}
@@ -50,7 +48,7 @@ func TestLocalCache(t *testing.T) {
 		t.Errorf("Incorrect data within the Miss error. Got: %+v", asMiss)
 	}
 
-	if val != nil {
+	if val != 0 {
 		t.Errorf("Value for key 'someKey1' should be nil. Is %d", val)
 	}
 
@@ -80,7 +78,7 @@ func TestLocalCache(t *testing.T) {
 	time.Sleep(2 * time.Second) // Wait for all keys to expire.
 	for i := 2; i <= 6; i++ {
 		val, err := cache.Get(fmt.Sprintf("someKey%d", i))
-		if val != nil {
+		if val != 0 {
 			t.Errorf("No value should have been returned for expired key 'someKey%d'.", i)
 		}
 
@@ -115,9 +113,9 @@ func TestLocalCache(t *testing.T) {
 	}
 }
 
-func TestLocalCacheHighConcurrency(t *testing.T) {
+func TestSimpleCacheHighConcurrency(t *testing.T) {
 
-	cache, err := NewLocalCache(500, 1*time.Second)
+	cache, err := NewSimpleLRU[string, int](500, 1*time.Second)
 	if err != nil {
 		t.Error("No error should have been returned. Got: ", err)
 	}
@@ -141,4 +139,61 @@ func TestLocalCacheHighConcurrency(t *testing.T) {
 		}
 	}
 	wg.Wait()
+}
+
+
+func TestInt64Cache(t *testing.T) {
+	c, err := NewSimpleLRU[int64, int64](5, NoTTL)
+	if err != nil {
+		t.Error("No error should have been returned. Got: ", err)
+	}
+
+	for i := int64(1); i <= 5; i++ {
+		err := c.Set(i, i)
+		if err != nil {
+			t.Errorf("Setting value '%d', should not have raised an error. Got: %s", i, err)
+		}
+	}
+
+	for i := int64(1); i <= 5; i++ {
+		val, err := c.Get(i)
+		if err != nil {
+			t.Errorf("Getting value '%d', should not have raised an error. Got: %s", i, err)
+		}
+		if val != i {
+			t.Errorf("Value for key '%d' should be %d. Is %d", i, i, val)
+		}
+	}
+
+	c.Set(6, 6)
+
+	// Oldest item (1) should have been removed
+	val, err := c.Get(1)
+	if err == nil {
+		t.Errorf("Getting value 'someKey1', should not have raised an error. Got: %s", err)
+	}
+
+	_, ok := err.(*Miss)
+	if !ok {
+		t.Errorf("Error should be of type Miss. Is %T", err)
+	}
+
+	if val != 0 {
+		t.Errorf("Value for key 'someKey1' should be nil. Is %d", val)
+	}
+
+	// 2-6 should be available
+	for i := int64(2); i <= 6; i++ {
+		val, err := c.Get(i)
+		if err != nil {
+			t.Errorf("Getting value '%d', should not have raised an error. Got: %s", i, err)
+		}
+		if val != i {
+			t.Errorf("Value for key '%d' should be %d. Is %d", i, i, val)
+		}
+	}
+
+	if len(c.items) != 5 {
+		t.Error("Items size should be 5. is: ", len(c.items))
+	}
 }

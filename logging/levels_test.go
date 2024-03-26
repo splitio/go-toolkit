@@ -2,40 +2,15 @@ package logging
 
 import (
 	"testing"
+
+	"github.com/splitio/go-toolkit/v5/logging/mocks"
 )
-
-type mockedLogger struct {
-	msgs map[string]bool
-}
-
-func (l *mockedLogger) reset() {
-	l.msgs = make(map[string]bool)
-}
-
-func (l *mockedLogger) Error(msg ...interface{}) {
-	l.msgs["Error"] = true
-}
-
-func (l *mockedLogger) Warning(msg ...interface{}) {
-	l.msgs["Warning"] = true
-}
-
-func (l *mockedLogger) Info(msg ...interface{}) {
-	l.msgs["Info"] = true
-}
-
-func (l *mockedLogger) Debug(msg ...interface{}) {
-	l.msgs["Debug"] = true
-}
-
-func (l *mockedLogger) Verbose(msg ...interface{}) {
-	l.msgs["Verbose"] = true
-}
 
 func TestErrorLevel(t *testing.T) {
 
-	delegate := &mockedLogger{}
-	delegate.reset()
+	delegate := &mocks.MockLogger{}
+	delegate.On("Error", "text").Once()
+	delegate.On("Errorf", "formatted %d", int(3)).Once()
 
 	logger := LevelFilteredLoggerWrapper{
 		delegate: delegate,
@@ -43,31 +18,25 @@ func TestErrorLevel(t *testing.T) {
 	}
 
 	logger.Error("text")
+	logger.Errorf("formatted %d", int(3))
 	logger.Warning("text")
+	logger.Warningf("formatted %d", int(3))
 	logger.Info("text")
+	logger.Infof("formatted %d", int(3))
 	logger.Debug("text")
+	logger.Debugf("formatted %d", int(3))
 	logger.Verbose("text")
+	logger.Verbosef("formatted %d", int(3))
 
-	shouldBeCalled := []string{"Error"}
-	shouldNotBeCalled := []string{"Warning", "Info", "Debug", "Verbose"}
-
-	for _, level := range shouldBeCalled {
-		if !delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should have been forwarded", level)
-		}
-	}
-
-	for _, level := range shouldNotBeCalled {
-		if delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should NOT have been forwarded", level)
-		}
-	}
+	delegate.AssertExpectations(t)
 }
 
 func TestWarningLevel(t *testing.T) {
-
-	delegate := &mockedLogger{}
-	delegate.reset()
+	delegate := &mocks.MockLogger{}
+	delegate.On("Error", "text").Once()
+	delegate.On("Errorf", "formatted %d", int(3)).Once()
+	delegate.On("Warning", "text").Once()
+	delegate.On("Warningf", "formatted %d", int(3)).Once()
 
 	logger := LevelFilteredLoggerWrapper{
 		delegate: delegate,
@@ -75,31 +44,27 @@ func TestWarningLevel(t *testing.T) {
 	}
 
 	logger.Error("text")
+	logger.Errorf("formatted %d", int(3))
 	logger.Warning("text")
+	logger.Warningf("formatted %d", int(3))
 	logger.Info("text")
+	logger.Infof("formatted %d", int(3))
 	logger.Debug("text")
+	logger.Debugf("formatted %d", int(3))
 	logger.Verbose("text")
+	logger.Verbosef("formatted %d", int(3))
 
-	shouldBeCalled := []string{"Error", "Warning"}
-	shouldNotBeCalled := []string{"Info", "Debug", "Verbose"}
-
-	for _, level := range shouldBeCalled {
-		if !delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should have been forwarded", level)
-		}
-	}
-
-	for _, level := range shouldNotBeCalled {
-		if delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should NOT have been forwarded", level)
-		}
-	}
+	delegate.AssertExpectations(t)
 }
 
 func TestInfoLevel(t *testing.T) {
-
-	delegate := &mockedLogger{}
-	delegate.reset()
+	delegate := &mocks.MockLogger{}
+	delegate.On("Error", "text").Once()
+	delegate.On("Errorf", "formatted %d", int(3)).Once()
+	delegate.On("Warning", "text").Once()
+	delegate.On("Warningf", "formatted %d", int(3)).Once()
+	delegate.On("Info", "text").Once()
+	delegate.On("Infof", "formatted %d", int(3)).Once()
 
 	logger := LevelFilteredLoggerWrapper{
 		delegate: delegate,
@@ -107,31 +72,29 @@ func TestInfoLevel(t *testing.T) {
 	}
 
 	logger.Error("text")
+	logger.Errorf("formatted %d", int(3))
 	logger.Warning("text")
+	logger.Warningf("formatted %d", int(3))
 	logger.Info("text")
+	logger.Infof("formatted %d", int(3))
 	logger.Debug("text")
+	logger.Debugf("formatted %d", int(3))
 	logger.Verbose("text")
+	logger.Verbosef("formatted %d", int(3))
 
-	shouldBeCalled := []string{"Error", "Warning", "Info"}
-	shouldNotBeCalled := []string{"Debug", "Verbose"}
-
-	for _, level := range shouldBeCalled {
-		if !delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should have been forwarded", level)
-		}
-	}
-
-	for _, level := range shouldNotBeCalled {
-		if delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should NOT have been forwarded", level)
-		}
-	}
+	delegate.AssertExpectations(t)
 }
 
 func TestDebugLevel(t *testing.T) {
-
-	delegate := &mockedLogger{}
-	delegate.reset()
+	delegate := &mocks.MockLogger{}
+	delegate.On("Error", "text").Once()
+	delegate.On("Errorf", "formatted %d", int(3)).Once()
+	delegate.On("Warning", "text").Once()
+	delegate.On("Warningf", "formatted %d", int(3)).Once()
+	delegate.On("Info", "text").Once()
+	delegate.On("Infof", "formatted %d", int(3)).Once()
+	delegate.On("Debug", "text").Once()
+	delegate.On("Debugf", "formatted %d", int(3)).Once()
 
 	logger := LevelFilteredLoggerWrapper{
 		delegate: delegate,
@@ -139,31 +102,31 @@ func TestDebugLevel(t *testing.T) {
 	}
 
 	logger.Error("text")
+	logger.Errorf("formatted %d", int(3))
 	logger.Warning("text")
+	logger.Warningf("formatted %d", int(3))
 	logger.Info("text")
+	logger.Infof("formatted %d", int(3))
 	logger.Debug("text")
+	logger.Debugf("formatted %d", int(3))
 	logger.Verbose("text")
+	logger.Verbosef("formatted %d", int(3))
 
-	shouldBeCalled := []string{"Error", "Warning", "Info", "Debug"}
-	shouldNotBeCalled := []string{"Verbose"}
-
-	for _, level := range shouldBeCalled {
-		if !delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should have been forwarded", level)
-		}
-	}
-
-	for _, level := range shouldNotBeCalled {
-		if delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should NOT have been forwarded", level)
-		}
-	}
+	delegate.AssertExpectations(t)
 }
 
 func TestVerboseLevel(t *testing.T) {
-
-	delegate := &mockedLogger{}
-	delegate.reset()
+	delegate := &mocks.MockLogger{}
+	delegate.On("Error", "text").Once()
+	delegate.On("Errorf", "formatted %d", int(3)).Once()
+	delegate.On("Warning", "text").Once()
+	delegate.On("Warningf", "formatted %d", int(3)).Once()
+	delegate.On("Info", "text").Once()
+	delegate.On("Infof", "formatted %d", int(3)).Once()
+	delegate.On("Debug", "text").Once()
+	delegate.On("Debugf", "formatted %d", int(3)).Once()
+	delegate.On("Verbose", "text").Once()
+	delegate.On("Verbosef", "formatted %d", int(3)).Once()
 
 	logger := LevelFilteredLoggerWrapper{
 		delegate: delegate,
@@ -171,31 +134,31 @@ func TestVerboseLevel(t *testing.T) {
 	}
 
 	logger.Error("text")
+	logger.Errorf("formatted %d", int(3))
 	logger.Warning("text")
+	logger.Warningf("formatted %d", int(3))
 	logger.Info("text")
+	logger.Infof("formatted %d", int(3))
 	logger.Debug("text")
+	logger.Debugf("formatted %d", int(3))
 	logger.Verbose("text")
+	logger.Verbosef("formatted %d", int(3))
 
-	shouldBeCalled := []string{"Error", "Warning", "Info", "Debug", "Verbose"}
-	shouldNotBeCalled := []string{}
-
-	for _, level := range shouldBeCalled {
-		if !delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should have been forwarded", level)
-		}
-	}
-
-	for _, level := range shouldNotBeCalled {
-		if delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should NOT have been forwarded", level)
-		}
-	}
+	delegate.AssertExpectations(t)
 }
 
 func TestAllLevel(t *testing.T) {
-
-	delegate := &mockedLogger{}
-	delegate.reset()
+	delegate := &mocks.MockLogger{}
+	delegate.On("Error", "text").Once()
+	delegate.On("Errorf", "formatted %d", int(3)).Once()
+	delegate.On("Warning", "text").Once()
+	delegate.On("Warningf", "formatted %d", int(3)).Once()
+	delegate.On("Info", "text").Once()
+	delegate.On("Infof", "formatted %d", int(3)).Once()
+	delegate.On("Debug", "text").Once()
+	delegate.On("Debugf", "formatted %d", int(3)).Once()
+	delegate.On("Verbose", "text").Once()
+	delegate.On("Verbosef", "formatted %d", int(3)).Once()
 
 	logger := LevelFilteredLoggerWrapper{
 		delegate: delegate,
@@ -203,58 +166,58 @@ func TestAllLevel(t *testing.T) {
 	}
 
 	logger.Error("text")
+	logger.Errorf("formatted %d", int(3))
 	logger.Warning("text")
+	logger.Warningf("formatted %d", int(3))
 	logger.Info("text")
+	logger.Infof("formatted %d", int(3))
 	logger.Debug("text")
+	logger.Debugf("formatted %d", int(3))
 	logger.Verbose("text")
+	logger.Verbosef("formatted %d", int(3))
 
-	shouldBeCalled := []string{"Error", "Warning", "Info", "Debug", "Verbose"}
-	shouldNotBeCalled := []string{}
+	delegate.AssertExpectations(t)
 
-	for _, level := range shouldBeCalled {
-		if !delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should have been forwarded", level)
-		}
-	}
-
-	for _, level := range shouldNotBeCalled {
-		if delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should NOT have been forwarded", level)
-		}
-	}
 }
 
 func TestNoneLevel(t *testing.T) {
-
-	delegate := &mockedLogger{}
-	delegate.reset()
-
+	delegate := &mocks.MockLogger{}
 	logger := LevelFilteredLoggerWrapper{
 		delegate: delegate,
 		level:    LevelNone,
 	}
 
 	logger.Error("text")
+	logger.Errorf("formatted %d", int(3))
 	logger.Warning("text")
+	logger.Warningf("formatted %d", int(3))
 	logger.Info("text")
+	logger.Infof("formatted %d", int(3))
 	logger.Debug("text")
+	logger.Debugf("formatted %d", int(3))
 	logger.Verbose("text")
+	logger.Verbosef("formatted %d", int(3))
 
-	shouldNotBeCalled := []string{"Error", "Warning", "Info", "Debug", "Verbose"}
-	shouldBeCalled := []string{}
-
-	for _, level := range shouldBeCalled {
-		if !delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should have been forwarded", level)
-		}
-	}
-
-	for _, level := range shouldNotBeCalled {
-		if delegate.msgs[level] {
-			t.Errorf("Call to log level function \"%s\" should NOT have been forwarded", level)
-		}
-	}
+	delegate.AssertExpectations(t)
 }
+
+// ---------------------------------
+
+type mockedLogger struct{ msgs map[string]bool }
+
+func (*mockedLogger) Debugf(fmt string, msg ...interface{})   { panic("unimplemented") }
+func (*mockedLogger) Errorf(fmt string, msg ...interface{})   { panic("unimplemented") }
+func (*mockedLogger) Infof(fmt string, msg ...interface{})    { panic("unimplemented") }
+func (*mockedLogger) Verbosef(fmt string, msg ...interface{}) { panic("unimplemented") }
+func (*mockedLogger) Warningf(fmt string, msg ...interface{}) { panic("unimplemented") }
+func (l *mockedLogger) reset()                                { l.msgs = make(map[string]bool) }
+func (l *mockedLogger) Error(msg ...interface{})              { l.msgs["Error"] = true }
+func (l *mockedLogger) Warning(msg ...interface{})            { l.msgs["Warning"] = true }
+func (l *mockedLogger) Info(msg ...interface{})               { l.msgs["Info"] = true }
+func (l *mockedLogger) Debug(msg ...interface{})              { l.msgs["Debug"] = true }
+func (l *mockedLogger) Verbose(msg ...interface{})            { l.msgs["Verbose"] = true }
+
+var _ LoggerInterface = (*mockedLogger)(nil)
 
 func writelog(logger *ExtendedLevelFilteredLoggerWrapper) {
 	logger.ErrorFn("hello %s", func() []interface{} { return []interface{}{"world"} })

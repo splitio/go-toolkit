@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/splitio/go-toolkit/v5/testhelpers"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRedisWrapperKeysAndScan(t *testing.T) {
@@ -93,7 +93,7 @@ func TestRedisWrapperPipeline(t *testing.T) {
 	}
 
 	items, _ := result[0].Multi()
-	testhelpers.AssertStringSliceEquals(t, items, []string{"e1", "e2", "e3"}, "result of lrange should be e1,e2,e3")
+    assert.Equal(t, []string{"e1", "e2", "e3"}, items)
 	if l := result[1].Int(); l != 3 {
 		t.Error("length should be 3. is: ", l)
 	}

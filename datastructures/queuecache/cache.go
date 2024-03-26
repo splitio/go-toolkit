@@ -29,19 +29,19 @@ func (e *MessagesDroppedError) Error() string {
 }
 
 // InMemoryQueueCacheOverlay offers an in-memory queue that gets re-populated whenever it runs out of items
-type InMemoryQueueCacheOverlay struct {
+type InMemoryQueueCacheOverlay[T any] struct {
 	maxSize      int
 	writeCursor  int
 	readCursor   int
-	queue        []interface{}
+	queue        []T
 	lock         sync.Mutex
-	refillCustom func(count int) ([]interface{}, error)
+	refillCustom func(count int) ([]T, error)
 }
 
 // New creates a new InMemoryQueueCacheOverlay
-func New(maxSize int, refillFunc func(count int) ([]interface{}, error)) *InMemoryQueueCacheOverlay {
-	return &InMemoryQueueCacheOverlay{
-		queue:        make([]interface{}, maxSize),
+func New[T any](maxSize int, refillFunc func(count int) ([]T, error)) *InMemoryQueueCacheOverlay[T] {
+	return &InMemoryQueueCacheOverlay[T]{
+		queue:        make([]T, maxSize),
 		maxSize:      maxSize,
 		writeCursor:  0,
 		readCursor:   0,
@@ -50,7 +50,7 @@ func New(maxSize int, refillFunc func(count int) ([]interface{}, error)) *InMemo
 }
 
 // Count returns the number of cached items
-func (i *InMemoryQueueCacheOverlay) Count() int {
+func (i *InMemoryQueueCacheOverlay[T]) Count() int {
 	if i.writeCursor == i.readCursor {
 		return 0
 	} else if i.writeCursor > i.readCursor {
@@ -59,7 +59,7 @@ func (i *InMemoryQueueCacheOverlay) Count() int {
 	return i.maxSize - (i.readCursor - i.writeCursor)
 }
 
-func (i *InMemoryQueueCacheOverlay) write(elem interface{}) error {
+func (i *InMemoryQueueCacheOverlay[T]) write(elem T) error {
 	if ((i.writeCursor + 1) % i.maxSize) == i.readCursor {
 		return errors.New("QUEUE_FULL")
 	}
@@ -69,9 +69,10 @@ func (i *InMemoryQueueCacheOverlay) write(elem interface{}) error {
 	return nil
 }
 
-func (i *InMemoryQueueCacheOverlay) read() (interface{}, error) {
+func (i *InMemoryQueueCacheOverlay[T]) read() (T, error) {
 	if i.readCursor == i.writeCursor {
-		return nil, errors.New("QUEUE_EMPTY")
+        var t T
+		return t, errors.New("QUEUE_EMPTY")
 	}
 
 	toReturn := i.queue[i.readCursor]
@@ -79,7 +80,7 @@ func (i *InMemoryQueueCacheOverlay) read() (interface{}, error) {
 	return toReturn, nil
 }
 
-func (i *InMemoryQueueCacheOverlay) refillWrapper(count int) (result []interface{}, err error) {
+func (i *InMemoryQueueCacheOverlay[T]) refillWrapper(count int) (result []T, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			result = nil
@@ -92,7 +93,7 @@ func (i *InMemoryQueueCacheOverlay) refillWrapper(count int) (result []interface
 }
 
 // Fetch items (will re-populate if necessary)
-func (i *InMemoryQueueCacheOverlay) Fetch(requestedCount int) ([]interface{}, error) {
+func (i *InMemoryQueueCacheOverlay[T]) Fetch(requestedCount int) ([]T, error) {
 	defer i.lock.Unlock()
 	i.lock.Lock()
 
@@ -110,7 +111,7 @@ func (i *InMemoryQueueCacheOverlay) Fetch(requestedCount int) ([]interface{}, er
 		}
 	}
 
-	toReturn := make([]interface{}, int(math.Min(float64(requestedCount), float64(i.Count()))))
+	toReturn := make([]T, int(math.Min(float64(requestedCount), float64(i.Count()))))
 	for index := 0; index < len(toReturn); index++ {
 		elem, err := i.read()
 		if err != nil {

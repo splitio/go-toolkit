@@ -1,4 +1,4 @@
-package hasher
+package hashing
 
 // Implementation borrowed from https://github.com/spaolacci/murmur3,
 // distributed under BSD-3 license.

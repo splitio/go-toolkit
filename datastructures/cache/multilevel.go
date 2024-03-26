@@ -7,26 +7,26 @@ import (
 )
 
 // MLCLayer is the interface that should be implemented for all caching structs to be used with this piece of code.
-type MLCLayer interface {
-	Get(ctx context.Context, key string) (interface{}, error)
-	Set(ctx context.Context, key string, value interface{}) error
+type MLCLayer[K comparable, V comparable] interface {
+	Get(ctx context.Context, key K) (V, error)
+	Set(ctx context.Context, key K, value V) error
 }
 
 // MultiLevelCache bundles a list of ordered cache layers (upper -> lower)
-type MultiLevelCache interface {
-	Get(ctx context.Context, key string) (interface{}, error)
+type MultiLevelCache[K comparable, V comparable] interface {
+	Get(ctx context.Context, key K) (V, error)
 }
 
 // MultiLevelCacheImpl implements the MultiLevelCache interface
-type MultiLevelCacheImpl struct {
-	layers []MLCLayer
+type MultiLevelCacheImpl[K comparable, V comparable] struct {
+	layers []MLCLayer[K, V]
 	logger logging.LoggerInterface
 }
 
 // Get returns the value of the requested key (if found) and populates upper levels with it
-func (c *MultiLevelCacheImpl) Get(ctx context.Context, key string) (interface{}, error) {
+func (c *MultiLevelCacheImpl[K, V]) Get(ctx context.Context, key K) (V, error) {
 	toUpdate := make([]int, 0, len(c.layers))
-	var item interface{}
+	var item V
 	var err error
 	for index, layer := range c.layers {
 		item, err = layer.Get(ctx, key)
@@ -49,8 +49,9 @@ func (c *MultiLevelCacheImpl) Get(ctx context.Context, key string) (interface{},
 		}
 	}
 
-	if item == nil || err != nil {
-		return nil, &Miss{Where: "ALL_LEVELS", Key: key}
+    var empty V
+	if item == empty || err != nil {
+		return empty, &Miss{Where: "ALL_LEVELS", Key: key}
 	}
 
 	// Update upper layers if any
@@ -66,10 +67,10 @@ func (c *MultiLevelCacheImpl) Get(ctx context.Context, key string) (interface{},
 }
 
 // NewMultiLevel creates and returns a new MultiLevelCache instance
-func NewMultiLevel(layers []MLCLayer, logger logging.LoggerInterface) (*MultiLevelCacheImpl, error) {
+func NewMultiLevel[K comparable, V comparable](layers []MLCLayer[K, V], logger logging.LoggerInterface) (*MultiLevelCacheImpl[K, V], error) {
 	if logger == nil {
 		logger = logging.NewLogger(nil)
 	}
 
-	return &MultiLevelCacheImpl{layers: layers, logger: logger}, nil
+	return &MultiLevelCacheImpl[K, V]{layers: layers, logger: logger}, nil
 }
