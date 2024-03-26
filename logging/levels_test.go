@@ -3,7 +3,7 @@ package logging
 import (
 	"testing"
 
-	"github.com/splitio/go-toolkit/v5/logging/mocks"
+	"github.com/splitio/go-toolkit/v6/logging/mocks"
 )
 
 func TestErrorLevel(t *testing.T) {

@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"github.com/splitio/go-toolkit/v5/backoff"
+	"github.com/splitio/go-toolkit/v6/backoff"
 	"github.com/stretchr/testify/mock"
 	"time"
 )
