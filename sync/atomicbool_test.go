@@ -2,40 +2,20 @@ package sync
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAtomicBool(t *testing.T) {
 	a := NewAtomicBool(false)
-	if a.IsSet() {
-		t.Error("initial value should be false")
-	}
-
-	if !a.TestAndSet() {
-		t.Error("compare and swap should succeed with no other concurrent access.")
-	}
-
-	if a.TestAndSet() {
-		t.Error("compare and swap should return false if it didn't change anything.")
-	}
-
-	if !a.IsSet() {
-		t.Error("should now be true")
-	}
+    assert.False(t, a.IsSet())
+    assert.True(t, a.TestAndSet())
+    assert.False(t, a.TestAndSet())
+    assert.True(t, a.IsSet())
 
 	b := NewAtomicBool(true)
-	if !b.IsSet() {
-		t.Error("initial value should be true")
-	}
-
-	if b.TestAndClear() != true {
-		t.Error("compare and swap should succeed with no other concurrent access.")
-	}
-
-	if !a.TestAndClear() {
-		t.Error("compare and swap should return false if it didn't change anything.")
-	}
-
-	if b.IsSet() {
-		t.Error("should now be false")
-	}
+    assert.True(t, b.IsSet())
+    assert.True(t, b.TestAndClear())
+	assert.False(t, b.TestAndClear())
+    assert.False(t, b.IsSet())
 }

@@ -9,6 +9,11 @@ type LoggerInterface interface {
 	Info(msg ...interface{})
 	Debug(msg ...interface{})
 	Verbose(msg ...interface{})
+	Errorf(fmt string, msg ...interface{})
+	Warningf(fmt string, msg ...interface{})
+	Infof(fmt string, msg ...interface{})
+	Debugf(fmt string, msg ...interface{})
+	Verbosef(fmt string, msg ...interface{})
 }
 
 // ParamsFn is a function that returns a slice of interface{}

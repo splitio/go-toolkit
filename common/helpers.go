@@ -40,14 +40,14 @@ func WithBackoffCancelling(unit time.Duration, max time.Duration, main func() bo
 		isDone := main()
 
 		// Create timeout timer for backoff
-		backoffTimer := time.NewTimer(MinDuration(time.Duration(math.Pow(2, float64(attempts)))*unit, max))
+		backoffTimer := time.NewTimer(Min(time.Duration(math.Pow(2, float64(attempts)))*unit, max))
 		defer backoffTimer.Stop()
 
 		for !isDone {
 			attempts++
 
 			// Setting timer considerint attempts
-			backoffTimer.Reset(MinDuration(time.Duration(math.Pow(2, float64(attempts)))*unit, max))
+			backoffTimer.Reset(Min(time.Duration(math.Pow(2, float64(attempts)))*unit, max))
 
 			select {
 			case <-cancel:

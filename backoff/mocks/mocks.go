@@ -1,16 +1,23 @@
 package mocks
 
-import "time"
+import (
+	"github.com/splitio/go-toolkit/v6/backoff"
+	"github.com/stretchr/testify/mock"
+	"time"
+)
 
 type BackoffMock struct {
-	NextCall  func() time.Duration
-	ResetCall func()
+	mock.Mock
 }
 
+// Next implements backoff.Interface.
 func (b *BackoffMock) Next() time.Duration {
-	return b.NextCall()
+    return b.Called().Get(0).(time.Duration)
 }
 
+// Reset implements backoff.Interface.
 func (b *BackoffMock) Reset() {
-	b.ResetCall()
+    b.Called()
 }
+
+var _ backoff.Interface = (*BackoffMock)(nil)

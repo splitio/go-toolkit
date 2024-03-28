@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/splitio/go-toolkit/v5/logging"
-	"github.com/splitio/go-toolkit/v5/struct/traits/lifecycle"
+	"github.com/splitio/go-toolkit/v6/logging"
+	"github.com/splitio/go-toolkit/v6/struct/traits/lifecycle"
 )
 
 const (

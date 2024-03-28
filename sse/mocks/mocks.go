@@ -1,34 +1,31 @@
 package mocks
 
+import "github.com/stretchr/testify/mock"
+
 type RawEventMock struct {
-	IDCall      func() string
-	EventCall   func() string
-	DataCall    func() string
-	RetryCall   func() int64
-	IsErrorCall func() bool
-	IsEmptyCall func() bool
+	mock.Mock
 }
 
 func (r *RawEventMock) ID() string {
-	return r.IDCall()
+	return r.Called().String(0)
 }
 
 func (r *RawEventMock) Event() string {
-	return r.EventCall()
+	return r.Called().String(0)
 }
 
 func (r *RawEventMock) Data() string {
-	return r.DataCall()
+	return r.Called().String(0)
 }
 
 func (r *RawEventMock) Retry() int64 {
-	return r.RetryCall()
+	return r.Called().Get(0).(int64)
 }
 
 func (r *RawEventMock) IsError() bool {
-	return r.IsErrorCall()
+	return r.Called().Bool(0)
 }
 
 func (r *RawEventMock) IsEmpty() bool {
-	return r.IsEmptyCall()
+	return r.Called().Bool(0)
 }

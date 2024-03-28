@@ -3,32 +3,20 @@ package backoff
 import (
 	"testing"
 	"time"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestBackoff(t *testing.T) {
 	base := int64(10)
 	maxAllowed := 60 * time.Second
 	backoff := New(base, maxAllowed)
-	if backoff.base != base {
-		t.Error("It should be equals to 10")
-	}
-	if backoff.maxAllowed != maxAllowed {
-		t.Error("It should be equals to 60")
-	}
-	if backoff.Next() != 1*time.Second {
-		t.Error("It should be 1 second")
-	}
-	if backoff.Next() != 10*time.Second {
-		t.Error("It should be 10 seconds")
-	}
-	if backoff.Next() != 60*time.Second {
-		t.Error("It should be 60 seconds")
-	}
+    assert.Equal(t, base, backoff.base)
+    assert.Equal(t, maxAllowed, backoff.maxAllowed)
+    assert.Equal(t, 1*time.Second, backoff.Next())
+    assert.Equal(t, 10*time.Second, backoff.Next())
+    assert.Equal(t, 60*time.Second, backoff.Next())
+
 	backoff.Reset()
-	if backoff.current != 0 {
-		t.Error("It should be zero")
-	}
-	if backoff.Next() != 1*time.Second {
-		t.Error("It should be 1 second")
-	}
+    assert.Equal(t, int64(0), backoff.current)
+    assert.Equal(t, 1*time.Second, backoff.Next())
 }

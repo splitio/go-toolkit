@@ -1,4 +1,4 @@
-package hasher
+package hashing
 
 // Hasher interface
 type Hasher interface {

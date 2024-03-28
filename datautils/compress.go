@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"fmt"
-	"io/ioutil"
+	"io"
 )
 
 const (
@@ -48,7 +48,7 @@ func Decompress(data []byte, compressType int) ([]byte, error) {
 			return nil, err
 		}
 		defer gz.Close()
-		raw, err := ioutil.ReadAll(gz)
+		raw, err := io.ReadAll(gz)
 		if err != nil {
 			return nil, err
 		}
@@ -59,7 +59,7 @@ func Decompress(data []byte, compressType int) ([]byte, error) {
 			return nil, err
 		}
 		defer zl.Close()
-		raw, err := ioutil.ReadAll(zl)
+		raw, err := io.ReadAll(zl)
 		if err != nil {
 			return nil, err
 		}
