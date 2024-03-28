@@ -2,6 +2,8 @@ package jsonvalidator
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLen0(t *testing.T) {
@@ -13,12 +15,8 @@ func TestLen0(t *testing.T) {
 	originChild := OriginChild{two: "Test", three: 1}
 
 	err := ValidateConfiguration(originChild, nil)
-	if err == nil {
-		t.Error("Should inform error")
-	}
-	if err.Error() != "no configuration provided" {
-		t.Error("Wrong message")
-	}
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, err, "no configuration provided")
 }
 
 func TestSame(t *testing.T) {
@@ -36,9 +34,7 @@ func TestSame(t *testing.T) {
 	origin := Origin{OriginChild: originChild, One: 1}
 
 	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"two\": \"test\", \"three\": 10}}"))
-	if err != nil {
-		t.Error("Should not inform error")
-	}
+	assert.Nil(t, err)
 }
 
 func TestDifferentPropertyParent(t *testing.T) {
@@ -56,12 +52,8 @@ func TestDifferentPropertyParent(t *testing.T) {
 	origin := Origin{OriginChild: originChild, One: 1}
 
 	err := ValidateConfiguration(origin, []byte("{\"four\": 10, \"originChild\": {\"two\": \"test\", \"three\": 10}}"))
-	if err == nil {
-		t.Error("Should inform error")
-	}
-	if err.Error() != "\"four\" is not a valid property in configuration" {
-		t.Error("Wrong message")
-	}
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, err, "\"four\" is not a valid property in configuration")
 }
 
 func TestDifferentPropertyChild(t *testing.T) {
@@ -79,12 +71,8 @@ func TestDifferentPropertyChild(t *testing.T) {
 	origin := Origin{OriginChild: originChild, One: 1}
 
 	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"two\": \"test\", \"four\": 10}}"))
-	if err == nil {
-		t.Error("Should inform error")
-	}
-	if err.Error() != "\"originChild.four\" is not a valid property in configuration" {
-		t.Error("Wrong message", err.Error())
-	}
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, err, "\"originChild.four\" is not a valid property in configuration")
 }
 
 func TestDifferentParentAndChild(t *testing.T) {
@@ -102,12 +90,8 @@ func TestDifferentParentAndChild(t *testing.T) {
 	origin := Origin{OriginChild: originChild, One: 1}
 
 	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"testChild\": {\"two\": \"test\", \"three\": 10}}"))
-	if err == nil {
-		t.Error("Should inform error")
-	}
-	if err.Error() != "\"testChild\" is not a valid property in configuration" {
-		t.Error("Wrong message, it should inform parent")
-	}
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, err, "\"testChild\" is not a valid property in configuration")
 }
 
 func TestDifferentPropertyInChild(t *testing.T) {
@@ -125,12 +109,8 @@ func TestDifferentPropertyInChild(t *testing.T) {
 	origin := Origin{OriginChild: originChild, One: 1}
 
 	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"two\": \"test\", \"three\": 10, \"four\": 10}}"))
-	if err == nil {
-		t.Error("Should inform error")
-	}
-	if err.Error() != "\"originChild.four\" is not a valid property in configuration" {
-		t.Error("Wrong message=", err.Error())
-	}
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, err, "\"originChild.four\" is not a valid property in configuration")
 }
 
 func TestDifferentPropertyInChildBool(t *testing.T) {
@@ -148,12 +128,8 @@ func TestDifferentPropertyInChildBool(t *testing.T) {
 	origin := Origin{OriginChild: originChild, One: 1}
 
 	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"two\": \"test\", \"three\": 10, \"four\": true}}"))
-	if err == nil {
-		t.Error("Should inform error")
-	}
-	if err.Error() != "\"originChild.four\" is not a valid property in configuration" {
-		t.Error("Wrong message=")
-	}
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, err, "\"originChild.four\" is not a valid property in configuration")
 }
 
 func TestDifferentPropertyInChildNumber(t *testing.T) {
@@ -171,12 +147,8 @@ func TestDifferentPropertyInChildNumber(t *testing.T) {
 	origin := Origin{OriginChild: originChild, One: 1}
 
 	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"two\": \"test\", \"three\": 10, \"four\": 10}}"))
-	if err == nil {
-		t.Error("Should inform error")
-	}
-	if err.Error() != "\"originChild.four\" is not a valid property in configuration" {
-		t.Error("Wrong message=")
-	}
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, err, "\"originChild.four\" is not a valid property in configuration")
 }
 
 func TestSameThirdLevel(t *testing.T) {
@@ -200,11 +172,7 @@ func TestSameThirdLevel(t *testing.T) {
 	origin := Origin{OriginChild: originChild, One: 1}
 
 	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"child\": {\"two\": \"test\", \"three\": 10}, \"three\": 10}}"))
-	if err != nil {
-		t.Error(err.Error())
-
-		t.Error("Should not inform error")
-	}
+	assert.Nil(t, err)
 }
 
 func TestDifferenthirdLevel(t *testing.T) {
@@ -228,10 +196,6 @@ func TestDifferenthirdLevel(t *testing.T) {
 	origin := Origin{OriginChild: originChild, One: 1}
 
 	err := ValidateConfiguration(origin, []byte("{\"one\": 10, \"originChild\": {\"child\": {\"t\": \"test\", \"three\": 10}, \"three\": 10}}"))
-	if err == nil {
-		t.Error("Should inform error")
-	}
-	if err.Error() != "\"originChild.child.t\" is not a valid property in configuration" {
-		t.Error("Wrong message", err.Error())
-	}
+	assert.NotNil(t, err)
+	assert.ErrorContains(t, err, "\"originChild.child.t\" is not a valid property in configuration")
 }

@@ -1,53 +1,41 @@
 package datautils
 
-import "testing"
+import (
+    "testing"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func TestCompressDecompressError(t *testing.T) {
 	data := "compression"
 
 	_, err := Compress([]byte(data), 4)
-	if err == nil || err.Error() != "compression type not found" {
-		t.Error("It should return err")
-	}
+    assert.ErrorContains(t, err, "compression type not found")
 
 	_, err = Decompress([]byte("err"), 4)
-	if err == nil || err.Error() != "compression type not found" {
-		t.Error("It should return err")
-	}
+    assert.ErrorContains(t, err, "compression type not found")
 }
 
 func TestCompressDecompressGZip(t *testing.T) {
 	data := "compression gzip"
 
 	compressed, err := Compress([]byte(data), GZip)
-	if err != nil {
-		t.Error("err should be nil")
-	}
+    assert.Nil(t, err)
 
 	decompressed, err := Decompress(compressed, GZip)
-	if err != nil {
-		t.Error("err should be nil")
-	}
+    assert.Nil(t, err)
 
-	if string(decompressed) != data {
-		t.Error("It should be equal")
-	}
+    assert.Equal(t, data, string(decompressed))
 }
 
 func TestCompressDecompressZLib(t *testing.T) {
 	data := "compression zlib"
 
 	compressed, err := Compress([]byte(data), Zlib)
-	if err != nil {
-		t.Error("err should be nil")
-	}
+    assert.Nil(t, err)
 
 	decompressed, err := Decompress(compressed, Zlib)
-	if err != nil {
-		t.Error("err should be nil")
-	}
+    assert.Nil(t, err)
 
-	if string(decompressed) != data {
-		t.Error("It should be equal")
-	}
+    assert.Equal(t, data, string(decompressed))
 }

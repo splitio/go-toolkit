@@ -6,110 +6,62 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSimpleCache(t *testing.T) {
 	cache, err := NewSimpleLRU[string, int](5, 1*time.Second)
-	if err != nil {
-		t.Error("No error should have been returned. Got: ", err)
-	}
+	assert.Nil(t, err)
 
 	for i := 1; i <= 5; i++ {
 		err := cache.Set(fmt.Sprintf("someKey%d", i), i)
-		if err != nil {
-			t.Errorf("Setting value 'someKey%d', should not have raised an error. Got: %s", i, err)
-		}
+		assert.Nil(t, err)
 	}
 
 	for i := 1; i <= 5; i++ {
 		val, err := cache.Get(fmt.Sprintf("someKey%d", i))
-		if err != nil {
-			t.Errorf("Getting value 'someKey%d', should not have raised an error. Got: %s", i, err)
-		}
-		if val != i {
-			t.Errorf("Value for key 'someKey%d' should be %d. Is %d", i, i, val)
-		}
+		assert.Nil(t, err)
+		assert.Equal(t, i, val)
 	}
 
 	cache.Set("someKey6", 6)
 
 	// Oldest item (1) should have been removed
 	val, err := cache.Get("someKey1")
-	if err == nil {
-		t.Errorf("Getting value 'someKey1', should not have raised an error. Got: %s", err)
-	}
-
+	assert.NotNil(t, err)
 	asMiss, ok := err.(*Miss)
-	if !ok {
-		t.Errorf("Error should be of type Miss. Is %T", err)
-	}
-
-	if asMiss.Key != "someKey1" || asMiss.Where != "LOCAL" {
-		t.Errorf("Incorrect data within the Miss error. Got: %+v", asMiss)
-	}
-
-	if val != 0 {
-		t.Errorf("Value for key 'someKey1' should be nil. Is %d", val)
-	}
+	assert.True(t, ok)
+	assert.Equal(t, "someKey1", asMiss.Key)
+	assert.Equal(t, "LOCAL", asMiss.Where)
+	assert.Equal(t, 0, val)
 
 	// 2-6 should be available
 	for i := 2; i <= 6; i++ {
 		val, err := cache.Get(fmt.Sprintf("someKey%d", i))
-		if err != nil {
-			t.Errorf("Getting value 'someKey%d', should not have raised an error. Got: %s", i, err)
-		}
-		if val != i {
-			t.Errorf("Value for key 'someKey%d' should be %d. Is %d", i, i, val)
-		}
+		assert.Nil(t, err)
+		assert.Equal(t, i, val)
 	}
 
-	if len(cache.items) != 5 {
-		t.Error("Items size should be 5. is: ", len(cache.items))
-	}
-
-	if len(cache.ttls) != len(cache.items) {
-		t.Error("TTLs size should be the same size as items")
-	}
-
-	if cache.lru.Len() != 5 {
-		t.Error("LRU size should be 5. is: ", cache.lru.Len())
-	}
+	assert.Equal(t, 5, len(cache.items))
+	assert.Equal(t, 5, len(cache.ttls))
+	assert.Equal(t, 5, cache.lru.Len())
 
 	time.Sleep(2 * time.Second) // Wait for all keys to expire.
+
 	for i := 2; i <= 6; i++ {
 		val, err := cache.Get(fmt.Sprintf("someKey%d", i))
-		if val != 0 {
-			t.Errorf("No value should have been returned for expired key 'someKey%d'.", i)
-		}
-
-		if err == nil {
-			t.Errorf("Getting value 'someKey%d', should have raised an 'Expired' error. Got nil", i)
-			continue
-		}
-
-		asExpiredErr, ok := err.(*Expired)
-		if !ok {
-			t.Errorf("Returned error should be of 'Expired' type. Is %T", err)
-			continue
-		}
-
-		if asExpiredErr.Key != fmt.Sprintf("someKey%d", i) {
-			t.Errorf("Key in Expired error should be 'someKey%d'. Is: '%s'", i, asExpiredErr.Key)
-		}
-
-		if asExpiredErr.Value != i {
-			t.Errorf("Value in Expired error should be %d. Is %+v", i, asExpiredErr.Value)
-		}
+		assert.Equal(t, 0, val)
+		assert.NotNil(t, err)
+		asExpired, ok := err.(*Expired)
+		assert.True(t, ok)
+		assert.Equal(t, fmt.Sprintf("someKey%d", i), asExpired.Key)
+		assert.Equal(t, i, asExpired.Value)
 
 		ttl, ok := cache.ttls[fmt.Sprintf("someKey%d", i)]
-		if !ok {
-			t.Errorf("A ttl entry should exist for key 'someKey%d'", i)
-			continue
-		}
+		assert.True(t, ok)
+		assert.Equal(t, asExpired.When, ttl.Add(cache.ttl))
 
-		if asExpiredErr.When != ttl.Add(cache.ttl) {
-			t.Errorf("Key 'someKey%d' should have expired at %+v. It did at %+v", i, ttl.Add(cache.ttl), asExpiredErr.When)
-		}
 	}
 }
 
@@ -141,59 +93,35 @@ func TestSimpleCacheHighConcurrency(t *testing.T) {
 	wg.Wait()
 }
 
-
 func TestInt64Cache(t *testing.T) {
 	c, err := NewSimpleLRU[int64, int64](5, NoTTL)
-	if err != nil {
-		t.Error("No error should have been returned. Got: ", err)
-	}
+	assert.Nil(t, err)
 
 	for i := int64(1); i <= 5; i++ {
-		err := c.Set(i, i)
-		if err != nil {
-			t.Errorf("Setting value '%d', should not have raised an error. Got: %s", i, err)
-		}
+		assert.Nil(t, c.Set(i, i))
 	}
 
 	for i := int64(1); i <= 5; i++ {
 		val, err := c.Get(i)
-		if err != nil {
-			t.Errorf("Getting value '%d', should not have raised an error. Got: %s", i, err)
-		}
-		if val != i {
-			t.Errorf("Value for key '%d' should be %d. Is %d", i, i, val)
-		}
+        assert.Nil(t, err)
+        assert.Equal(t, i, val)
 	}
 
 	c.Set(6, 6)
 
 	// Oldest item (1) should have been removed
 	val, err := c.Get(1)
-	if err == nil {
-		t.Errorf("Getting value 'someKey1', should not have raised an error. Got: %s", err)
-	}
-
+    assert.NotNil(t, err)
 	_, ok := err.(*Miss)
-	if !ok {
-		t.Errorf("Error should be of type Miss. Is %T", err)
-	}
-
-	if val != 0 {
-		t.Errorf("Value for key 'someKey1' should be nil. Is %d", val)
-	}
+    assert.True(t, ok)
+    assert.Equal(t, int64(0), val)
 
 	// 2-6 should be available
 	for i := int64(2); i <= 6; i++ {
 		val, err := c.Get(i)
-		if err != nil {
-			t.Errorf("Getting value '%d', should not have raised an error. Got: %s", i, err)
-		}
-		if val != i {
-			t.Errorf("Value for key '%d' should be %d. Is %d", i, i, val)
-		}
+        assert.Nil(t, err)
+        assert.Equal(t, i, val)
 	}
 
-	if len(c.items) != 5 {
-		t.Error("Items size should be 5. is: ", len(c.items))
-	}
+    assert.Equal(t, 5, len(c.items))
 }

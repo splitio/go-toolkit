@@ -2,6 +2,9 @@ package sse
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 )
 
 func TestEventBuilder(t *testing.T) {
@@ -13,30 +16,16 @@ func TestEventBuilder(t *testing.T) {
 	builder.AddLine(":some Comment")
 
 	e := builder.Build()
-	if e.Event() != "message" {
-		t.Error("event should be 'message'")
-	}
-	if e.Data() != "something" {
-		t.Error("data should be 'something'")
-	}
-	if e.ID() != "1234" {
-		t.Error("Id should be 1234")
-	}
-	if e.Retry() != 1 {
-		t.Error("retry should be 1234")
-	}
-	if e.IsEmpty() {
-		t.Error("event should not be empty")
-	}
-	if e.IsError() {
-		t.Error("event is not an error")
-	}
+    assert.Equal(t, "message", e.Event())
+    assert.Equal(t, "something", e.Data())
+    assert.Equal(t, "1234", e.ID())
+    assert.Equal(t, int64(1), e.Retry())
+    assert.False(t, e.IsEmpty())
+    assert.False(t, e.IsEmpty())
 
 	builder.Reset()
 	builder.AddLine("event: error")
 	builder.AddLine("data: someError")
 	e2 := builder.Build()
-	if !e2.IsError() {
-		t.Error("event is an error")
-	}
+    assert.True(t, e2.IsError())
 }

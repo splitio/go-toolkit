@@ -13,11 +13,11 @@ func Ref[T any](x T) *T {
 
 // RefOrNil returns a pointer to the value supplied if it's not the default value, nil otherwise
 func RefOrNil[T comparable](x T) *T {
-    var t T
-    if x == t {
-        return nil
-    }
-    return &x
+	var t T
+	if x == t {
+		return nil
+	}
+	return &x
 }
 
 // PointerOf performs a type-assertion to T and returns a pointer if successful, nil otherwise.
@@ -92,4 +92,12 @@ func Min[T cmp.Ordered](i1 T, rest ...T) T {
 		}
 	}
 	return min
+}
+
+func AsInterfaceSlice[T any](in []T) []interface{} {
+	out := make([]interface{}, len(in))
+	for idx := range in {
+		out[idx] = in[idx]
+	}
+	return out
 }

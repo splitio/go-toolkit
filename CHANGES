@@ -1,3 +1,10 @@
+v6.0.0 (TBD):
+- updated common helpers to be generic
+- updated datastructures to be generic
+- cleanup package structre and remove deprecated ones
+- updated logger with formatting functionality
+- modernized test harness & mocks
+
 5.4.0 (Jan 10, 2024)
 - Added `Scan` operation to Redis
 

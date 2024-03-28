@@ -7,14 +7,14 @@ import (
 	"os"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
 )
 
 func TestMurmurHashOnAlphanumericData(t *testing.T) {
 	inFile, err := os.Open("../testdata/murmur3-sample-data-v2.csv")
-	if err != nil {
-		t.Error("Missing test file...")
-		return
-	}
+    assert.Nil(t, err)
 	defer inFile.Close()
 
 	reader := csv.NewReader(bufio.NewReader(inFile))
@@ -32,19 +32,13 @@ func TestMurmurHashOnAlphanumericData(t *testing.T) {
 		digest, _ := strconv.ParseUint(arr[2], 10, 32)
 
 		calculated := NewMurmur332Hasher(uint32(seed)).Hash([]byte(str))
-		if calculated != uint32(digest) {
-			t.Errorf("%d: Murmur hash calculation failed for string %s. Should be %d and was %d", line, str, digest, calculated)
-			break
-		}
+        assert.Equal(t, calculated, uint32(digest))
 	}
 }
 
 func TestMurmurHashOnNonAlphanumericData(t *testing.T) {
 	inFile, err := os.Open("../testdata/murmur3-sample-data-non-alpha-numeric-v2.csv")
-	if err != nil {
-		t.Error("Missing test file...")
-		return
-	}
+    assert.Nil(t, err)
 	defer inFile.Close()
 
 	reader := csv.NewReader(bufio.NewReader(inFile))
@@ -62,9 +56,6 @@ func TestMurmurHashOnNonAlphanumericData(t *testing.T) {
 		digest, _ := strconv.ParseUint(arr[2], 10, 32)
 
 		calculated := NewMurmur332Hasher(uint32(seed)).Hash([]byte(str))
-		if calculated != uint32(digest) {
-			t.Errorf("%d: Murmur hash calculation failed for string %s. Should be %d and was %d", line, str, digest, calculated)
-			break
-		}
+        assert.Equal(t, calculated, uint32(digest))
 	}
 }

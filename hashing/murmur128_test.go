@@ -1,17 +1,17 @@
 package hashing
 
 import (
-    "os"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMurmur128(t *testing.T) {
 	raw, err := os.ReadFile("../testdata/murmur3_64_uuids.csv")
-	if err != nil {
-		t.Error("error reading murmur128 test cases files: ", err.Error())
-	}
+	assert.Nil(t, err)
 
 	lines := strings.Split(string(raw), "\n")
 	for _, line := range lines {
@@ -23,8 +23,6 @@ func TestMurmur128(t *testing.T) {
 		expected, _ := strconv.ParseInt(fields[2], 10, 64)
 
 		h1, _ := Sum128WithSeed([]byte(fields[0]), uint32(seed))
-		if int64(h1) != expected {
-			t.Errorf("Hashes don't match. Expected: %d, actual: %d", expected, uint64(h1))
-		}
+		assert.Equal(t, expected, int64(h1))
 	}
 }

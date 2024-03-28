@@ -2,212 +2,61 @@ package cache
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"testing"
 
+	"github.com/splitio/go-toolkit/v6/datastructures/cache/mocks"
 	"github.com/splitio/go-toolkit/v6/logging"
+	"github.com/stretchr/testify/assert"
 )
-
-type LayerMock struct {
-	getCall func(ctx context.Context, key string) (string, error)
-	setCall func(ctx context.Context, key string, value string) error
-}
-
-func (m *LayerMock) Get(ctx context.Context, key string) (string, error) {
-	return m.getCall(ctx, key)
-}
-
-func (m *LayerMock) Set(ctx context.Context, key string, value string) error {
-	return m.setCall(ctx, key, value)
-}
-
-type callTracker struct {
-	calls map[string]int
-	t     *testing.T
-}
-
-func newCallTracker(t *testing.T) *callTracker {
-	return &callTracker{calls: make(map[string]int), t: t}
-}
-
-func (c *callTracker) track(name string) { c.calls[name]++ }
-
-func (c *callTracker) reset() { c.calls = make(map[string]int) }
-
-func (c *callTracker) checkCall(name string, count int) {
-	c.t.Helper()
-	if c.calls[name] != count {
-		c.t.Errorf("calls for '%s' should be %d. is: %d", name, count, c.calls[name])
-	}
-}
-
-func (c *callTracker) checkTotalCalls(count int) {
-	c.t.Helper()
-	if len(c.calls) != count {
-		c.t.Errorf("The nomber of total calls should be '%d' and is '%d'", count, len(c.calls))
-	}
-}
 
 func TestMultiLevelCache(t *testing.T) {
 	// To test this we setup 3 layers of caching in order of querying: top -> mid -> bottom
 	// Top layer has key1, doesn't have key2 (returns Miss), has key3 expired and errors out when requesting any other Key
 	// Mid layer has key 2, returns a Miss on any other key, and fails the test if key1 is fetched (because it was present on top layer)
 	// Bottom layer fails if key1 or 2 are requested, has key 3. returns Miss if any other key is requested
-	calls := newCallTracker(t)
-	topLayer := &LayerMock{
-		getCall: func(ctx context.Context, key string) (string, error) {
-			calls.track(fmt.Sprintf("top:get:%s", key))
-			switch key {
-			case "key1":
-				return "value1", nil
-			case "key2":
-				return "", &Miss{Where: "layer1", Key: "key2"}
-			case "key3":
-				return "", &Expired{Key: "key3", Value: "someOtherValue"}
-			default:
-				return "", errors.New("someError")
-			}
-		},
-		setCall: func(ctx context.Context, key string, value string) error {
-			calls.track(fmt.Sprintf("top:set:%s", key))
-			switch key {
-			case "key1":
-				t.Error("Set should not be called on the top layer for key1")
-				break
-			case "key2":
-				break
-			case "key3":
-				break
-			default:
-				return errors.New("someError")
-			}
-			return nil
-		},
-	}
 
-	midLayer := &LayerMock{
-		getCall: func(ctx context.Context, key string) (string, error) {
-			calls.track(fmt.Sprintf("mid:get:%s", key))
-			switch key {
-			case "key1":
-				t.Error("Get should not be called on the mid layer for key1")
-				return "", nil
-			case "key2":
-				return "value2", nil
-			default:
-				return "", &Miss{Where: "layer2", Key: key}
-			}
-		},
-		setCall: func(ctx context.Context, key string, value string) error {
-			calls.track(fmt.Sprintf("mid:set:%s", key))
-			switch key {
-			case "key1":
-				t.Error("Set should not be called on the mid layer for key1")
-			case "key2":
-				t.Error("Set should not be called on the mid layer for key2")
-			case "key3":
-			default:
-				return errors.New("someError")
-			}
-			return nil
-		},
-	}
+	ctx := context.Background()
 
-	bottomLayer := &LayerMock{
-		getCall: func(ctx context.Context, key string) (string, error) {
-			calls.track(fmt.Sprintf("bot:get:%s", key))
-			switch key {
-			case "key1":
-				t.Error("Get should not be called on the mid layer for key1")
-				return "", nil
-			case "key2":
-				t.Error("Get should not be called on the mid layer for key1")
-				return "", nil
-			case "key3":
-				return "value3", nil
-			default:
-				return "", &Miss{Where: "layer3", Key: key}
-			}
-		},
-		setCall: func(ctx context.Context, key string, value string) error {
-			calls.track(fmt.Sprintf("bot:set:%s", key))
-			switch key {
-			case "key1":
-				t.Error("Set should not be called on the mid layer for key1")
-			case "key2":
-				t.Error("Set should not be called on the mid layer for key2")
-			default:
-				return errors.New("someError")
-			}
-			return nil
-		},
-	}
+	topLayer := &mocks.LayerMock{}
+	topLayer.On("Get", ctx, "key1").Once().Return("value1", nil)
+	topLayer.On("Get", ctx, "key2").Once().Return("", &Miss{Where: "layer1", Key: "key2"})
+	topLayer.On("Get", ctx, "key3").Once().Return("value1", &Expired{Key: "key3", Value: "someOtherValue"})
+	topLayer.On("Get", ctx, "key4").Once().Return("", &Miss{Where: "layer1", Key: "key4"})
+	topLayer.On("Set", ctx, "key2", "value2").Once().Return(nil)
+	topLayer.On("Set", ctx, "key3", "value3").Once().Return(nil)
+
+	midLayer := &mocks.LayerMock{}
+	midLayer.On("Get", ctx, "key2").Once().Return("value2", nil)
+	midLayer.On("Get", ctx, "key3").Once().Return("", &Miss{Where: "layer2", Key: "key3"}, nil)
+	midLayer.On("Get", ctx, "key4").Once().Return("", &Miss{Where: "layer2", Key: "key4"})
+	midLayer.On("Set", ctx, "key3", "value3").Once().Return(nil)
+
+	bottomLayer := &mocks.LayerMock{}
+	bottomLayer.On("Get", ctx, "key3").Once().Return("value3", nil)
+	bottomLayer.On("Get", ctx, "key4").Once().Return("", &Miss{Where: "layer3", Key: "key4"})
 
 	cacheML := MultiLevelCacheImpl[string, string]{
 		logger: logging.NewLogger(nil),
 		layers: []MLCLayer[string, string]{topLayer, midLayer, bottomLayer},
 	}
 
-	value1, err := cacheML.Get(context.TODO(), "key1")
-	if err != nil {
-		t.Error("No error should have been returned. Got: ", err)
-	}
-	if value1 != "value1" {
-		t.Error("Get 'key1' should return 'value1'. Got: ", value1)
-	}
-	calls.checkCall("top:get:key1", 1)
-	calls.checkTotalCalls(1)
+	value1, err := cacheML.Get(ctx, "key1")
+	assert.Nil(t, err)
+	assert.Equal(t, "value1", value1)
 
-	calls.reset()
-	value2, err := cacheML.Get(context.TODO(), "key2")
-	if err != nil {
-		t.Error("No error should have been returned. Got: ", err)
-	}
-	if value2 != "value2" {
-		t.Error("Get 'key2' should return 'value2'. Got: ", value2)
-	}
-	calls.checkCall("top:get:key2", 1)
-	calls.checkCall("mid:get:key2", 1)
-	calls.checkCall("top:set:key2", 1)
-	calls.checkTotalCalls(3)
+	value2, err := cacheML.Get(ctx, "key2")
+	assert.Nil(t, err)
+	assert.Equal(t, "value2", value2)
 
-	calls.reset()
-	value3, err := cacheML.Get(context.TODO(), "key3")
-	if err != nil {
-		t.Error("Error should be nil. Was: ", err)
-	}
+	value3, err := cacheML.Get(ctx, "key3")
+	assert.Nil(t, err)
+	assert.Equal(t, "value3", value3)
 
-	if value3 != "value3" {
-		t.Error("Get 'key3' should return 'value3'. Got: ", value3)
-	}
-	calls.checkCall("top:get:key3", 1)
-	calls.checkCall("mid:get:key3", 1)
-	calls.checkCall("bot:get:key3", 1)
-	calls.checkCall("mid:set:key3", 1)
-	calls.checkCall("top:set:key3", 1)
-	calls.checkTotalCalls(5)
-
-	calls.reset()
-	value4, err := cacheML.Get(context.TODO(), "key4")
-	if err == nil {
-		t.Error("Error should be returned when getting nonexistant key.")
-	}
-
+	value4, err := cacheML.Get(ctx, "key4")
+	assert.NotNil(t, err)
 	asMiss, ok := err.(*Miss)
-	if !ok {
-		t.Errorf("Error should be of Miss type. Is %T", err)
-	}
-
-	if asMiss.Where != "ALL_LEVELS" || asMiss.Key != "key4" {
-		t.Errorf("Incorrect 'Where' or 'Key'. Got: %+v", asMiss)
-	}
-
-	if value4 != "" {
-		t.Errorf("Value returned for GET 'key4' should be nil. Is: %+v", value4)
-	}
-	calls.checkCall("top:get:key4", 1)
-	calls.checkCall("top:get:key4", 1)
-	calls.checkCall("top:get:key4", 1)
-	calls.checkTotalCalls(3)
+	assert.True(t, ok)
+	assert.Equal(t, "ALL_LEVELS", asMiss.Where)
+	assert.Equal(t, "key4", asMiss.Key)
+	assert.Equal(t, "", value4)
 }

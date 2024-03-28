@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/splitio/go-toolkit/v6/logging"
+	"github.com/stretchr/testify/assert"
 )
 
 var resMutex sync.RWMutex
@@ -55,23 +56,17 @@ func TestWorkerAdminConstructionAndNormalOperation(t *testing.T) {
 	}
 
 	resMutex.RLock()
-	if results["worker_2"] > 10 {
-		t.Error("Worker should have stopped working!")
-	}
+	assert.Less(t, results["worker_2"], 10)
 	resMutex.RUnlock()
+
 	time.Sleep(time.Second * 1)
 	errs := wa.StopAll(false)
-	if errs != nil {
-		t.Error("Not all workers stopped properly")
-		t.Error(errs)
-	}
+	assert.Nil(t, errs)
 	time.Sleep(time.Second * 1)
 
 	for _, i := range []int{1, 2, 3} {
 		wName := fmt.Sprintf("worker_%d", i)
-		if wa.IsWorkerRunning(wName) {
-			t.Errorf("Worker %s should be stopped", wName)
-		}
+		assert.False(t, wa.IsWorkerRunning(wName))
 	}
 
 }
@@ -131,21 +126,15 @@ func TestWaitingForWorkersToFinish(t *testing.T) {
 	}
 
 	resMutex.RLock()
-	if results["worker_2"] > 10 {
-		t.Error("Worker should have stopped working!")
-	}
+	assert.Less(t, results["worker_2"], 10)
 	resMutex.RUnlock()
 	time.Sleep(time.Second * 1)
+
 	errs := wa.StopAll(true)
-	if errs != nil {
-		t.Error("Not all workers stopped properly")
-		t.Error(errs)
-	}
+	assert.Nil(t, errs)
 
 	for _, i := range []int{1, 2, 3, 4} {
 		wName := fmt.Sprintf("worker_%d", i)
-		if wa.IsWorkerRunning(wName) {
-			t.Errorf("Worker %s should be stopped", wName)
-		}
+		assert.False(t, wa.IsWorkerRunning(wName))
 	}
 }
