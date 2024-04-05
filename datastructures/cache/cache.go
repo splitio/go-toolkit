@@ -12,13 +12,13 @@ const (
 )
 
 // SimpleLRU is an in-memory TTL & LRU cache
-type SimpleLRU[K comparable, V comparable] interface {
+type SimpleLRU[K comparable, V any] interface {
 	Get(key K) (V, error)
 	Set(key K, value V) error
 }
 
 // SimpleLRUImpl implements the Simple interface
-type SimpleLRUImpl[K comparable, V comparable] struct {
+type SimpleLRUImpl[K comparable, V any] struct {
 	ttl    time.Duration
 	maxLen int
 	ttls   map[K]time.Time
@@ -27,7 +27,7 @@ type SimpleLRUImpl[K comparable, V comparable] struct {
 	mutex  sync.Mutex
 }
 
-type centry[K comparable, V comparable] struct {
+type centry[K comparable, V any] struct {
 	key   K
 	value V
 }
@@ -99,7 +99,7 @@ func (c *SimpleLRUImpl[K, V]) Set(key K, value V) error {
 }
 
 // NewSimple returns a new Simple instance of the specified size and TTL
-func NewSimpleLRU[K comparable, V comparable](maxSize int, ttl time.Duration) (*SimpleLRUImpl[K, V], error) {
+func NewSimpleLRU[K comparable, V any](maxSize int, ttl time.Duration) (*SimpleLRUImpl[K, V], error) {
 	if maxSize <= 0 {
 		return nil, fmt.Errorf("Cache size should be > 0. Is: %d", maxSize)
 	}
