@@ -1,3 +1,6 @@
+5.5.0 (Apr 26, 2024)
+- Added split version filter to be used on semver matchers logic.
+
 5.4.0 (Jan 10, 2024)
 - Added `Scan` operation to Redis
 
