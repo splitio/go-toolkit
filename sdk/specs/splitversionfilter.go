@@ -4,11 +4,11 @@ import (
 	"github.com/splitio/go-toolkit/v5/sdk/specs/matchers"
 )
 
-type splitVersionFilter struct {
+type SplitVersionFilter struct {
 	excluded map[string]*map[string]struct{}
 }
 
-func NewSplitVersionFilter() splitVersionFilter {
+func NewSplitVersionFilter() SplitVersionFilter {
 	matchersToExclude := map[string]*map[string]struct{}{
 		"1.0": {
 			matchers.MatcherEqualToSemver:                  {},
@@ -19,12 +19,12 @@ func NewSplitVersionFilter() splitVersionFilter {
 		},
 		"1.1": {},
 	}
-	return splitVersionFilter{
+	return SplitVersionFilter{
 		excluded: matchersToExclude,
 	}
 }
 
-func (s *splitVersionFilter) shouldFilter(matcher string, apiVersion string) bool {
+func (s *SplitVersionFilter) ShouldFilter(matcher string, apiVersion string) bool {
 	forVersion, ok := s.excluded[apiVersion]
 	if !ok {
 		return false
