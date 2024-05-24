@@ -102,6 +102,7 @@ type Pipeline interface {
 	SRem(key string, members ...interface{})
 	SMembers(key string)
 	Del(keys ...string)
+	SetNX(key string, value interface{}, expiration time.Duration)
 	Exec() ([]Result, error)
 }
 
@@ -170,6 +171,11 @@ func (p *PipelineImpl) Del(keys ...string) {
 	p.wrapped.Del(context.TODO(), keys...)
 }
 
+// SetNX schedules a SetNX operation on this pipeline
+func (p *PipelineImpl) SetNX(key string, value interface{}, expiration time.Duration) {
+	p.wrapped.SetNX(context.TODO(), key, value, expiration)
+}
+
 // Exec executes the pipeline
 func (p *PipelineImpl) Exec() ([]Result, error) {
 	res, err := p.wrapped.Exec(context.TODO())
@@ -217,6 +223,7 @@ type Client interface {
 	HIncrBy(key string, field string, value int64) Result
 	HSet(key string, hashKey string, value interface{}) Result
 	HGetAll(key string) Result
+	SetNX(key string, value interface{}, expiration time.Duration) Result
 	Type(key string) Result
 	Pipeline() Pipeline
 	Scan(cursor uint64, match string, count int64) Result
@@ -392,6 +399,12 @@ func (c *ClientImpl) HSet(key string, hashKey string, value interface{}) Result 
 // HGetAll implements HGetAll wrapper for redis
 func (c *ClientImpl) HGetAll(key string) Result {
 	res := c.wrapped.HGetAll(context.TODO(), key)
+	return wrapResult(res)
+}
+
+// SetNX implements SetNX wrapper for redis
+func (c *ClientImpl) SetNX(key string, value interface{}, expiration time.Duration) Result {
+	res := c.wrapped.SetNX(context.TODO(), key, value, expiration)
 	return wrapResult(res)
 }
 

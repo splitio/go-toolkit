@@ -184,6 +184,11 @@ func (p *PrefixedRedisClient) HGetAll(key string) (map[string]string, error) {
 	return p.client.HGetAll(withPrefix(p.prefix, key)).MapStringString()
 }
 
+// SetNX wraps around redis get method by adding prefix and returning error directly
+func (p *PrefixedRedisClient) SetNX(key string, value interface{}, expiration time.Duration) error {
+	return p.client.SetNX(withPrefix(p.prefix, key), value, expiration).Err()
+}
+
 // Type implements Type wrapper for redis with prefix
 func (p *PrefixedRedisClient) Type(key string) (string, error) {
 	return p.client.Type(withPrefix(p.prefix, key)).ResultString()
@@ -292,6 +297,11 @@ func (p *PrefixedPipeline) Del(keys ...string) {
 		prefixedKeys[i] = withPrefix(p.prefix, k)
 	}
 	p.wrapped.Del(prefixedKeys...)
+}
+
+// SetNX schedules a Set operation on this pipeline
+func (p *PrefixedPipeline) SetNX(key string, value interface{}, expiration time.Duration) {
+	p.wrapped.SetNX(withPrefix(p.prefix, key), value, expiration)
 }
 
 // Exec executes the pipeline
