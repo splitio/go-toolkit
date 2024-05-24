@@ -1,12 +1,61 @@
 package redis
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 	"github.com/splitio/go-toolkit/v5/testhelpers"
 )
+
+func TestRedisWrapperKeysAndScan(t *testing.T) {
+	rc := redis.NewUniversalClient(&redis.UniversalOptions{})
+	client := &ClientImpl{wrapped: rc}
+
+	for i := 0; i < 10; i++ {
+		client.Set(fmt.Sprintf("utest.key-del%d", i), 0, 1*time.Hour)
+	}
+
+	keys, err := client.Keys("utest*").Multi()
+	if err != nil {
+		t.Error("there should not be any error. Got: ", err)
+	}
+
+	if len(keys) != 10 {
+		t.Error("should be 10 keys. Got: ", len(keys))
+	}
+
+	var cursor uint64
+	scanKeys := make([]string, 0)
+	for {
+		result := client.Scan(cursor, "utest*", 10)
+		if result.Err() != nil {
+			t.Error("there should not be any error. Got: ", result.Err())
+		}
+
+		cursor = uint64(result.Int())
+
+		keys, err := result.Multi()
+		if err != nil {
+			t.Error("there should not be any error. Got: ", err)
+		}
+
+		scanKeys = append(scanKeys, keys...)
+
+		if cursor == 0 {
+			break
+		}
+	}
+
+	if len(scanKeys) != 10 {
+		t.Error("should be 10 keys. Got: ", len(scanKeys))
+	}
+
+	for i := 0; i < 10; i++ {
+		client.Del(fmt.Sprintf("utest.key-del%d", i))
+	}
+}
 
 func TestRedisWrapperPipeline(t *testing.T) {
 	rc := redis.NewUniversalClient(&redis.UniversalOptions{})

@@ -171,6 +171,7 @@ type MockClient struct {
 	HSetCall                   func(key string, hashKey string, value interface{}) redis.Result
 	TypeCall                   func(key string) redis.Result
 	PipelineCall               func() redis.Pipeline
+	ScanCall                   func(cursor uint64, match string, count int64) redis.Result
 }
 
 func (m *MockClient) ClusterMode() bool {
@@ -317,4 +318,9 @@ func (m *MockClient) Type(key string) redis.Result {
 // Pipeline mock
 func (m *MockClient) Pipeline() redis.Pipeline {
 	return m.PipelineCall()
+}
+
+// Scan mock
+func (m *MockClient) Scan(cursor uint64, match string, count int64) redis.Result {
+	return m.ScanCall(cursor, match, count)
 }
