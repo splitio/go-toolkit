@@ -305,3 +305,8 @@ func (m *MockResultOutput) ResultString() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
 }
+
+// Val implements redis.Result.
+func (m *MockResultOutput) Val() interface{} {
+	return m.Called().Get(0)
+}
