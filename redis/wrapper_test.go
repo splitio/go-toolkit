@@ -50,11 +50,24 @@ func TestRedisWrapperPipeline(t *testing.T) {
 	client := &ClientImpl{wrapped: rc}
 
 	client.RPush("key1", "e1", "e2", "e3")
-	client.Set("key-del1", 0, 1*time.Hour)
-	client.Set("key-del2", 0, 1*time.Hour)
+	client.Set("key-del1", 10, 1*time.Hour)
+	client.Set("key-del2", 20, 1*time.Hour)
 	res := client.SetNX("key-setnx-cient", "field-test-1", 1*time.Hour)
 	assert.True(t, res.Bool(), "setnx should be executed successfully")
 	client.Del("key-setnx-cient")
+
+	script := `
+	if redis.call("get", KEYS[1]) == ARGV[1] then
+		return 10
+	else
+		return 20
+	end
+	`
+
+	res = client.Eval(script, []string{"key-del1"}, "0")
+	assert.Equal(t, int64(20), res.Val())
+	res = client.Eval(script, []string{"key-del1"}, "10")
+	assert.Equal(t, int64(10), res.Val())
 
 	pipe := client.Pipeline()
 	pipe.LRange("key1", 0, 5)

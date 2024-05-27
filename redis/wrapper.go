@@ -24,6 +24,7 @@ type Result interface {
 	MultiInterface() ([]interface{}, error)
 	Err() error
 	MapStringString() (map[string]string, error)
+	Val() interface{}
 }
 
 // ResultImpl generic interface
@@ -32,6 +33,7 @@ type ResultImpl struct {
 	valueString     string
 	valueBool       bool
 	valueDuration   time.Duration
+	valueInterface  interface{}
 	err             error
 	multi           []string
 	multiInterface  []interface{}
@@ -86,6 +88,11 @@ func (r *ResultImpl) MultiInterface() ([]interface{}, error) {
 // MapStringString implementation
 func (r *ResultImpl) MapStringString() (map[string]string, error) {
 	return r.mapStringString, r.err
+}
+
+// Val implementation
+func (r *ResultImpl) Val() interface{} {
+	return r.valueInterface
 }
 
 // Pipeline defines the interface of a redis pipeline
@@ -481,7 +488,9 @@ func wrapResult(result interface{}) Result {
 		}
 	case *redis.Cmd:
 		return &ResultImpl{
-			err: v.Err(),
+			err:            v.Err(),
+			valueString:    v.String(),
+			valueInterface: v.Val(),
 		}
 	case *redis.MapStringStringCmd:
 		return &ResultImpl{
