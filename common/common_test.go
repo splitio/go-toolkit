@@ -66,8 +66,8 @@ func TestDerefOr(t *testing.T) {
 	assert.Equal(t, "hola", DerefOr(Ref("hola"), "sarasa"))
 	assert.Equal(t, "sarasa", DerefOr(nil, "sarasa"))
 	assert.Equal(t, "", DerefOr(nil, ""))
-	assert.Equal(t, 1, Ref(1), 2)
-	assert.Equal(t, 2, nil, 2)
+	assert.Equal(t, 1, DerefOr(Ref(1), 2))
+	assert.Equal(t, 2, DerefOr(nil, 2))
 }
 
 func TestValueOr(t *testing.T) {
