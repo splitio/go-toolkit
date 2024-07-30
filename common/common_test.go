@@ -62,6 +62,14 @@ func TestDedupeInNewSlice(t *testing.T) {
 	assert.ElementsMatch(t, []string{"a", "c"}, UnorderedDedupedCopy([]string{"c", "c", "a"}))
 }
 
+func TestDerefOr(t *testing.T) {
+	assert.Equal(t, "hola", DerefOr(Ref("hola"), "sarasa"))
+	assert.Equal(t, "sarasa", DerefOr(nil, "sarasa"))
+	assert.Equal(t, "", DerefOr(nil, ""))
+	assert.Equal(t, 1, DerefOr(Ref(1), 2))
+	assert.Equal(t, 2, DerefOr(nil, 2))
+}
+
 func TestValueOr(t *testing.T) {
 	assert.Equal(t, int64(3), ValueOr[int64](0, 3))
 	assert.Equal(t, (*int)(nil), ValueOr[*int](nil, nil))

@@ -34,6 +34,14 @@ func PointerOf[T any](x interface{}) *T {
 	return &ta
 }
 
+// DerefOr returns value pointed by `tp` or the fallback supplied
+func DerefOr[T any](tp *T, fallback T) T {
+	if tp == nil {
+		return fallback
+	}
+	return *tp
+}
+
 // PartitionSliceByLength partitions a slice into multiple slices of up to `maxItems` size
 func PartitionSliceByLength[T comparable](items []T, maxItems int) [][]T {
 	var splitted [][]T
