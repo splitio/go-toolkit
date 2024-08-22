@@ -49,7 +49,7 @@ func (c *MultiLevelCacheImpl[K, V]) Get(ctx context.Context, key K) (V, error) {
 		}
 	}
 
-    var empty V
+	var empty V
 	if item == empty || err != nil {
 		return empty, &Miss{Where: "ALL_LEVELS", Key: key}
 	}

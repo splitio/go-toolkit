@@ -15,6 +15,7 @@ const (
 type SimpleLRU[K comparable, V any] interface {
 	Get(key K) (V, error)
 	Set(key K, value V) error
+	FlushKey(key K)
 }
 
 // SimpleLRUImpl implements the Simple interface
@@ -98,16 +99,31 @@ func (c *SimpleLRUImpl[K, V]) Set(key K, value V) error {
 	return nil
 }
 
+// FlushKey removes an entry form the cache if it exists. Does nothing otherwise
+func (c *SimpleLRUImpl[K, V]) FlushKey(key K) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	if node, ok := c.items[key]; ok {
+		c.lru.MoveToBack(node)
+		delete(c.items, key)
+		if c.ttls != nil {
+			delete(c.ttls, key)
+		}
+		c.lru.Remove(c.lru.Back())
+	}
+}
+
 // NewSimple returns a new Simple instance of the specified size and TTL
 func NewSimpleLRU[K comparable, V any](maxSize int, ttl time.Duration) (*SimpleLRUImpl[K, V], error) {
 	if maxSize <= 0 {
 		return nil, fmt.Errorf("Cache size should be > 0. Is: %d", maxSize)
 	}
-    
-    var ttls map[K]time.Time = nil
-    if ttl != NoTTL {
-        ttls = make(map[K]time.Time)
-    }
+
+	var ttls map[K]time.Time = nil
+	if ttl != NoTTL {
+		ttls = make(map[K]time.Time)
+	}
 
 	return &SimpleLRUImpl[K, V]{
 		maxLen: maxSize,

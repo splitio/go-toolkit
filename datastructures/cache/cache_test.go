@@ -63,6 +63,19 @@ func TestSimpleCache(t *testing.T) {
 		assert.Equal(t, asExpired.When, ttl.Add(cache.ttl))
 
 	}
+
+	assert.Nil(t, cache.Set("lala", 123))
+	v, err := cache.Get("lala")
+	assert.Nil(t, err)
+	assert.Equal(t, 123, v)
+
+	cache.FlushKey("lala")
+	v, err = cache.Get("lala")
+	assert.NotNil(t, err)
+	assert.Equal(t, 0, v)
+
+	var exp *Miss
+	assert.ErrorAs(t, err, &exp)
 }
 
 func TestSimpleCacheHighConcurrency(t *testing.T) {
@@ -103,25 +116,25 @@ func TestInt64Cache(t *testing.T) {
 
 	for i := int64(1); i <= 5; i++ {
 		val, err := c.Get(i)
-        assert.Nil(t, err)
-        assert.Equal(t, i, val)
+		assert.Nil(t, err)
+		assert.Equal(t, i, val)
 	}
 
 	c.Set(6, 6)
 
 	// Oldest item (1) should have been removed
 	val, err := c.Get(1)
-    assert.NotNil(t, err)
+	assert.NotNil(t, err)
 	_, ok := err.(*Miss)
-    assert.True(t, ok)
-    assert.Equal(t, int64(0), val)
+	assert.True(t, ok)
+	assert.Equal(t, int64(0), val)
 
 	// 2-6 should be available
 	for i := int64(2); i <= 6; i++ {
 		val, err := c.Get(i)
-        assert.Nil(t, err)
-        assert.Equal(t, i, val)
+		assert.Nil(t, err)
+		assert.Equal(t, i, val)
 	}
 
-    assert.Equal(t, 5, len(c.items))
+	assert.Equal(t, 5, len(c.items))
 }
