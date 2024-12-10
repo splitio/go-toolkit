@@ -3,6 +3,7 @@
 package logging
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -32,62 +33,115 @@ type LoggerOptions struct {
 // and provides Error, Debug, Warning and Info functions, that will forward a message
 // to the appropriate logger.
 type Logger struct {
-	debugLogger   log.Logger
-	infoLogger    log.Logger
-	warningLogger log.Logger
-	errorLogger   log.Logger
-	verboseLogger log.Logger
+	debugLogger   *log.Logger
+	infoLogger    *log.Logger
+	warningLogger *log.Logger
+	errorLogger   *log.Logger
+	verboseLogger *log.Logger
 	framesToSkip  int
+
+	contextInformation *ContextInformation
+	stringContext      string
 }
 
 // Verbose logs a message with Debug level
 func (l *Logger) Verbose(msg ...interface{}) {
+	if l.contextInformation != nil {
+		msg = append([]interface{}{l.stringContext}, msg...)
+	}
 	l.verboseLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
 }
 
 // Debug logs a message with Debug level
 func (l *Logger) Debug(msg ...interface{}) {
+	if l.contextInformation != nil {
+		msg = append([]interface{}{l.stringContext}, msg...)
+	}
 	l.debugLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
 }
 
 // Info logs a message with Info level
 func (l *Logger) Info(msg ...interface{}) {
+	if l.contextInformation != nil {
+		msg = append([]interface{}{l.stringContext}, msg...)
+	}
 	l.infoLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
 }
 
 // Warning logs a message with Warning level
 func (l *Logger) Warning(msg ...interface{}) {
+	if l.contextInformation != nil {
+		msg = append([]interface{}{l.stringContext}, msg...)
+	}
 	l.warningLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
 }
 
 // Error logs a message with Error level
 func (l *Logger) Error(msg ...interface{}) {
+	if l.contextInformation != nil {
+		msg = append([]interface{}{l.stringContext}, msg...)
+	}
 	l.errorLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
 }
 
 // Verbose logs a message with Debug level
 func (l *Logger) Verbosef(f string, args ...interface{}) {
+	if l.contextInformation != nil {
+		f = fmt.Sprintf("%s %s", l.stringContext, f)
+	}
 	l.verboseLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
 }
 
 // Debug logs a message with Debug level
 func (l *Logger) Debugf(f string, args ...interface{}) {
+	if l.contextInformation != nil {
+		f = fmt.Sprintf("%s %s", l.stringContext, f)
+	}
 	l.debugLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
 }
 
 // Info logs a message with Info level
 func (l *Logger) Infof(f string, args ...interface{}) {
+	if l.contextInformation != nil {
+		f = fmt.Sprintf("%s %s", l.stringContext, f)
+	}
 	l.infoLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
 }
 
 // Warning logs a message with Warning level
 func (l *Logger) Warningf(f string, args ...interface{}) {
+	if l.contextInformation != nil {
+		f = fmt.Sprintf("%s %s", l.stringContext, f)
+	}
 	l.warningLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
 }
 
 // Error logs a message with Error level
 func (l *Logger) Errorf(f string, args ...interface{}) {
+	if l.contextInformation != nil {
+		f = fmt.Sprintf("%s %s", l.stringContext, f)
+	}
 	l.errorLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
+}
+
+// WithContext sums one to the number of frames to skip
+func (l *Logger) WithContext(ctx context.Context) LoggerInterface {
+	contextInformation := Merge(l.contextInformation, GetContext(ctx))
+	stringContext := ""
+	if contextInformation != nil {
+		stringContext = contextInformation.String()
+	}
+	return &Logger{
+		debugLogger:   l.debugLogger,
+		infoLogger:    l.infoLogger,
+		warningLogger: l.warningLogger,
+		errorLogger:   l.errorLogger,
+		verboseLogger: l.verboseLogger,
+		framesToSkip:  l.framesToSkip,
+
+		contextInformation: contextInformation,
+		stringContext:      stringContext,
+	}
 }
 
 func normalizeOptions(options *LoggerOptions) *LoggerOptions {
@@ -131,26 +185,27 @@ func normalizeOptions(options *LoggerOptions) *LoggerOptions {
 }
 
 // newLogger constructor of Logger instance.
-//  Returns: a pointer to *Logger
-//  Assumes: that options are alredy normalized
+//
+//	Returns: a pointer to *Logger
+//	Assumes: that options are alredy normalized
 func newLogger(options *LoggerOptions) *Logger {
 	prefix := ""
 	if options.Prefix != "" {
 		prefix = fmt.Sprintf("%s - ", options.Prefix)
 	}
 	return &Logger{
-		debugLogger:   *log.New(options.DebugWriter, fmt.Sprintf("%sDEBUG - ", prefix), options.StandardLoggerFlags),
-		infoLogger:    *log.New(options.InfoWriter, fmt.Sprintf("%sINFO - ", prefix), options.StandardLoggerFlags),
-		warningLogger: *log.New(options.WarningWriter, fmt.Sprintf("%sWARNING - ", prefix), options.StandardLoggerFlags),
-		errorLogger:   *log.New(options.ErrorWriter, fmt.Sprintf("%sERROR - ", prefix), options.StandardLoggerFlags),
-		verboseLogger: *log.New(options.VerboseWriter, fmt.Sprintf("%sVERBOSE - ", prefix), options.StandardLoggerFlags),
-		framesToSkip:  3 + options.ExtraFramesToSkip,
+		debugLogger:   log.New(options.DebugWriter, fmt.Sprintf("%sDEBUG - ", prefix), options.StandardLoggerFlags),
+		infoLogger:    log.New(options.InfoWriter, fmt.Sprintf("%sINFO - ", prefix), options.StandardLoggerFlags),
+		warningLogger: log.New(options.WarningWriter, fmt.Sprintf("%sWARNING - ", prefix), options.StandardLoggerFlags),
+		errorLogger:   log.New(options.ErrorWriter, fmt.Sprintf("%sERROR - ", prefix), options.StandardLoggerFlags),
+		verboseLogger: log.New(options.VerboseWriter, fmt.Sprintf("%sVERBOSE - ", prefix), options.StandardLoggerFlags),
+		framesToSkip:  skipStackFrameBase + options.ExtraFramesToSkip,
+		stringContext: "",
 	}
 }
 
 // NewLogger instantiates a new Logger instance. Requires a pointer to a LoggerOptions struct to be passed.
 func NewLogger(options *LoggerOptions) LoggerInterface {
-
 	options = normalizeOptions(options)
 
 	logger := newLogger(options)
@@ -163,7 +218,6 @@ func NewLogger(options *LoggerOptions) LoggerInterface {
 
 // NewExtendedLogger instantiates a new Logger instance. Requires a pointer to a LoggerOptions struct to be passed.
 func NewExtendedLogger(options *LoggerOptions) ExtendedLoggerInterface {
-
 	options = normalizeOptions(options)
 
 	logger := newLogger(options)
