@@ -40,96 +40,80 @@ type Logger struct {
 	verboseLogger *log.Logger
 	framesToSkip  int
 
-	contextInformation *ContextInformation
-	stringContext      string
+	contextData   *ContextData
+	stringContext string
+}
+
+func (l *Logger) appendContext(msg ...interface{}) []interface{} {
+	if l.contextData != nil {
+		msg = append([]interface{}{l.stringContext}, msg...)
+	}
+	return msg
 }
 
 // Verbose logs a message with Debug level
 func (l *Logger) Verbose(msg ...interface{}) {
-	if l.contextInformation != nil {
-		msg = append([]interface{}{l.stringContext}, msg...)
-	}
-	l.verboseLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
+	l.verboseLogger.Output(l.framesToSkip, fmt.Sprintln(l.appendContext(msg...)...))
 }
 
 // Debug logs a message with Debug level
 func (l *Logger) Debug(msg ...interface{}) {
-	if l.contextInformation != nil {
-		msg = append([]interface{}{l.stringContext}, msg...)
-	}
-	l.debugLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
+	l.debugLogger.Output(l.framesToSkip, fmt.Sprintln(l.appendContext(msg...)...))
 }
 
 // Info logs a message with Info level
 func (l *Logger) Info(msg ...interface{}) {
-	if l.contextInformation != nil {
-		msg = append([]interface{}{l.stringContext}, msg...)
-	}
-	l.infoLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
+	l.infoLogger.Output(l.framesToSkip, fmt.Sprintln(l.appendContext(msg...)...))
 }
 
 // Warning logs a message with Warning level
 func (l *Logger) Warning(msg ...interface{}) {
-	if l.contextInformation != nil {
-		msg = append([]interface{}{l.stringContext}, msg...)
-	}
-	l.warningLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
+	l.warningLogger.Output(l.framesToSkip, fmt.Sprintln(l.appendContext(msg...)...))
 }
 
 // Error logs a message with Error level
 func (l *Logger) Error(msg ...interface{}) {
-	if l.contextInformation != nil {
-		msg = append([]interface{}{l.stringContext}, msg...)
+	l.errorLogger.Output(l.framesToSkip, fmt.Sprintln(l.appendContext(msg...)...))
+}
+
+func (l *Logger) concatString(f string) string {
+	if l.contextData != nil {
+		f = l.stringContext + " " + f
 	}
-	l.errorLogger.Output(l.framesToSkip, fmt.Sprintln(msg...))
+	return f
 }
 
 // Verbose logs a message with Debug level
 func (l *Logger) Verbosef(f string, args ...interface{}) {
-	if l.contextInformation != nil {
-		f = fmt.Sprintf("%s %s", l.stringContext, f)
-	}
-	l.verboseLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
+	l.verboseLogger.Output(l.framesToSkip, fmt.Sprintf(l.concatString(f), args...))
 }
 
 // Debug logs a message with Debug level
 func (l *Logger) Debugf(f string, args ...interface{}) {
-	if l.contextInformation != nil {
-		f = fmt.Sprintf("%s %s", l.stringContext, f)
-	}
-	l.debugLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
+	l.debugLogger.Output(l.framesToSkip, fmt.Sprintf(l.concatString(f), args...))
 }
 
 // Info logs a message with Info level
 func (l *Logger) Infof(f string, args ...interface{}) {
-	if l.contextInformation != nil {
-		f = fmt.Sprintf("%s %s", l.stringContext, f)
-	}
-	l.infoLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
+	l.infoLogger.Output(l.framesToSkip, fmt.Sprintf(l.concatString(f), args...))
 }
 
 // Warning logs a message with Warning level
 func (l *Logger) Warningf(f string, args ...interface{}) {
-	if l.contextInformation != nil {
-		f = fmt.Sprintf("%s %s", l.stringContext, f)
-	}
-	l.warningLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
+	l.warningLogger.Output(l.framesToSkip, fmt.Sprintf(l.concatString(f), args...))
 }
 
 // Error logs a message with Error level
 func (l *Logger) Errorf(f string, args ...interface{}) {
-	if l.contextInformation != nil {
-		f = fmt.Sprintf("%s %s", l.stringContext, f)
-	}
-	l.errorLogger.Output(l.framesToSkip, fmt.Sprintf(f, args...))
+	l.errorLogger.Output(l.framesToSkip, fmt.Sprintf(l.concatString(f), args...))
 }
 
 // WithContext sums one to the number of frames to skip
 func (l *Logger) WithContext(ctx context.Context) LoggerInterface {
-	contextInformation := Merge(l.contextInformation, GetContext(ctx))
+	contextData := Merge(l.contextData, GetContext(ctx))
 	stringContext := ""
-	if contextInformation != nil {
-		stringContext = contextInformation.String()
+	if contextData != nil {
+		stringContext = contextData.String()
 	}
 	return &Logger{
 		debugLogger:   l.debugLogger,
@@ -139,8 +123,8 @@ func (l *Logger) WithContext(ctx context.Context) LoggerInterface {
 		verboseLogger: l.verboseLogger,
 		framesToSkip:  l.framesToSkip,
 
-		contextInformation: contextInformation,
-		stringContext:      stringContext,
+		contextData:   contextData,
+		stringContext: stringContext,
 	}
 }
 
