@@ -114,7 +114,10 @@ func (l *LevelFilteredLoggerWrapper) Warningf(fmt string, args ...interface{}) {
 
 // WithContext
 func (l *LevelFilteredLoggerWrapper) WithContext(ctx context.Context) LoggerInterface {
-	return l.delegate.WithContext(ctx)
+	return &LevelFilteredLoggerWrapper{
+		delegate: l.delegate.WithContext(ctx),
+		level:    l.level,
+	}
 }
 
 var _ LoggerInterface = (*LevelFilteredLoggerWrapper)(nil)
