@@ -6,8 +6,16 @@ import (
 	"slices"
 )
 
-// ContextKey =
+// ContextKey
 type ContextKey struct{}
+
+// Baseline
+type Baseline struct {
+	orgID *string
+	envID *string
+	name  *string
+	txIDs *string
+}
 
 // ContextData that will store all the context data to display in log
 type ContextData struct {
@@ -22,6 +30,22 @@ func NewContext() *ContextData {
 // WithTag adds a key value pair to the context
 func (c *ContextData) WithTag(key string, value string) *ContextData {
 	c.m[key] = value
+	return c
+}
+
+func (c *ContextData) WithBaselineContext(baseline Baseline) *ContextData {
+	if baseline.envID != nil {
+		c.m["env_id"] = *baseline.envID
+	}
+	if baseline.orgID != nil {
+		c.m["org_id"] = *baseline.orgID
+	}
+	if baseline.name != nil {
+		c.m["ls_name"] = *baseline.name
+	}
+	if baseline.txIDs != nil {
+		c.m["tx_ids"] = *baseline.txIDs
+	}
 	return c
 }
 
