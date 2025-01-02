@@ -3,7 +3,7 @@ module github.com/splitio/go-toolkit/v6
 go 1.21
 
 require (
-	github.com/redis/go-redis/v9 v9.0.4
+	github.com/redis/go-redis/v9 v9.5.1
 	github.com/stretchr/testify v1.9.0
 )
 

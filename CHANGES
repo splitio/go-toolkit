@@ -1,9 +1,12 @@
 v6.0.0 (TBD):
-- updated common helpers to be generic
-- updated datastructures to be generic
-- cleanup package structre and remove deprecated ones
-- updated logger with formatting functionality
-- modernized test harness & mocks
+- BREAKING CHANGE:
+    - Updated common helpers to be generic
+    - Updated datastructures to be generic
+    - Cleanup package structure and remove deprecated ones
+    - Updated logger with formatting functionality
+    - Modernized test harness & mocks
+- Added SetNX operation to RedisClient and RedisPipeline.
+- Added Val() result to Eval operation for RedisClient.
 
 5.4.0 (Jan 10, 2024)
 - Added `Scan` operation to Redis
