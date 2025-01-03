@@ -1,125 +1,62 @@
 package logging
 
 import (
-	"strings"
-	"sync"
+	"fmt"
+	"log"
 	"testing"
+	"time"
 )
 
-type MockWriter struct {
-	mutex  sync.RWMutex
-	strMsg string
-}
-
-func (m *MockWriter) Write(p []byte) (n int, err error) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	m.strMsg = string(p[:])
-	return 0, nil
-}
-
-func (m *MockWriter) Reset() {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	m.strMsg = ""
-}
-
-func (m *MockWriter) Get() string {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	return m.strMsg
-}
-
-var mW MockWriter
-
-func expectedLogMessage(expectedMessage string, t *testing.T) {
-	if !strings.Contains(mW.strMsg, expectedMessage) {
-		t.Error("Message error is different from the expected: " + mW.Get())
-	}
-	mW.Reset()
-}
-
-func getMockedLogger(prefix string) LoggerInterface {
-	return NewLogger(&LoggerOptions{
-		LogLevel:      5,
-		ErrorWriter:   &mW,
-		WarningWriter: &mW,
-		InfoWriter:    &mW,
-		DebugWriter:   &mW,
-		VerboseWriter: &mW,
-		Prefix:        prefix,
-	})
-}
-
 func TestWithoutPrefix(t *testing.T) {
-	logger := getMockedLogger("")
+	today := time.Now()
+	asFormat := fmt.Sprintf("%d/%02d/%02d", today.Year(), today.Month(), today.Day())
+	mockedWriter := &MockWriter{}
+	logger := NewLogger(&LoggerOptions{
+		StandardLoggerFlags: log.Ldate,
+		LogLevel:            5,
+		ErrorWriter:         mockedWriter,
+		WarningWriter:       mockedWriter,
+		InfoWriter:          mockedWriter,
+		DebugWriter:         mockedWriter,
+		VerboseWriter:       mockedWriter,
+		Prefix:              "",
+	})
+	mockedWriter.On("Write", []byte(fmt.Sprintf("DEBUG - %s some\n", asFormat))).Once().Return(0, nil)
 	logger.Debug("some")
-	debug := strings.Split(mW.strMsg, "-")
-	if debug[0] != "DEBUG " {
-		t.Error("It should not include prefix")
-	}
+	mockedWriter.On("Write", []byte(fmt.Sprintf("ERROR - %s some\n", asFormat))).Once().Return(0, nil)
 	logger.Error("some")
-	err := strings.Split(mW.strMsg, "-")
-	if err[0] != "ERROR " {
-		t.Error("It should not include prefix")
-	}
+	mockedWriter.On("Write", []byte(fmt.Sprintf("INFO - %s some\n", asFormat))).Once().Return(0, nil)
 	logger.Info("some")
-	info := strings.Split(mW.strMsg, "-")
-	if info[0] != "INFO " {
-		t.Error("It should not include prefix")
-	}
+	mockedWriter.On("Write", []byte(fmt.Sprintf("VERBOSE - %s some\n", asFormat))).Once().Return(0, nil)
 	logger.Verbose("some")
-	verbose := strings.Split(mW.strMsg, "-")
-	if verbose[0] != "VERBOSE " {
-		t.Error("It should not include prefix")
-	}
+	mockedWriter.On("Write", []byte(fmt.Sprintf("WARNING - %s some\n", asFormat))).Once().Return(0, nil)
 	logger.Warning("some")
-	warning := strings.Split(mW.strMsg, "-")
-	if warning[0] != "WARNING " {
-		t.Error("It should not include prefix")
-	}
+	mockedWriter.AssertExpectations(t)
 }
 
 func TestWithPrefix(t *testing.T) {
-	logger := getMockedLogger("prefix")
+	today := time.Now()
+	asFormat := fmt.Sprintf("%d/%02d/%02d", today.Year(), today.Month(), today.Day())
+	mockedWriter := &MockWriter{}
+	logger := NewLogger(&LoggerOptions{
+		StandardLoggerFlags: log.Ldate,
+		LogLevel:            5,
+		ErrorWriter:         mockedWriter,
+		WarningWriter:       mockedWriter,
+		InfoWriter:          mockedWriter,
+		DebugWriter:         mockedWriter,
+		VerboseWriter:       mockedWriter,
+		Prefix:              "prefix",
+	})
+	mockedWriter.On("Write", []byte(fmt.Sprintf("prefix - DEBUG - %s some\n", asFormat))).Once().Return(0, nil)
 	logger.Debug("some")
-	debug := strings.Split(mW.strMsg, "-")
-	if debug[0] != "prefix " {
-		t.Error("It should include prefix")
-	}
-	if debug[1] != " DEBUG " {
-		t.Error("It should not include prefix")
-	}
+	mockedWriter.On("Write", []byte(fmt.Sprintf("prefix - ERROR - %s some\n", asFormat))).Once().Return(0, nil)
 	logger.Error("some")
-	err := strings.Split(mW.strMsg, "-")
-	if err[0] != "prefix " {
-		t.Error("It should include prefix")
-	}
-	if err[1] != " ERROR " {
-		t.Error("It should not include prefix")
-	}
+	mockedWriter.On("Write", []byte(fmt.Sprintf("prefix - INFO - %s some\n", asFormat))).Once().Return(0, nil)
 	logger.Info("some")
-	info := strings.Split(mW.strMsg, "-")
-	if info[0] != "prefix " {
-		t.Error("It should include prefix")
-	}
-	if info[1] != " INFO " {
-		t.Error("It should not include prefix")
-	}
+	mockedWriter.On("Write", []byte(fmt.Sprintf("prefix - VERBOSE - %s some\n", asFormat))).Once().Return(0, nil)
 	logger.Verbose("some")
-	verbose := strings.Split(mW.strMsg, "-")
-	if verbose[0] != "prefix " {
-		t.Error("It should include prefix")
-	}
-	if verbose[1] != " VERBOSE " {
-		t.Error("It should not include prefix")
-	}
+	mockedWriter.On("Write", []byte(fmt.Sprintf("prefix - WARNING - %s some\n", asFormat))).Once().Return(0, nil)
 	logger.Warning("some")
-	warning := strings.Split(mW.strMsg, "-")
-	if warning[0] != "prefix " {
-		t.Error("It should include prefix")
-	}
-	if warning[1] != " WARNING " {
-		t.Error("It should not include prefix")
-	}
+	mockedWriter.AssertExpectations(t)
 }
