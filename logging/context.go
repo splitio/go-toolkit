@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 // ContextKey
@@ -37,13 +38,17 @@ func (c *ContextData) String() string {
 		keys = append(keys, k)
 	}
 	slices.Sort(keys)
-	toReturn := "["
-	for _, k := range keys {
-		toReturn += fmt.Sprintf("%s=%s, ", k, c.m[k])
+	var asBuilder strings.Builder
+	asBuilder.WriteString("[")
+	for i, k := range keys {
+		if i != len(keys)-1 {
+			asBuilder.WriteString(fmt.Sprintf("%s=%s, ", k, c.m[k]))
+			continue
+		}
+		asBuilder.WriteString(fmt.Sprintf("%s=%s", k, c.m[k]))
 	}
-	toReturn = toReturn[:len(toReturn)-2]
-	toReturn += "]"
-	return toReturn
+	asBuilder.WriteString("]")
+	return asBuilder.String()
 }
 
 // Merge merges two context information objects
