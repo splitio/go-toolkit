@@ -83,3 +83,12 @@ func (s *Set[T]) ToSlice() []T {
 	})
 	return tr
 }
+
+func (s *Set[T]) IsSubSet(other Set[T]) bool {
+	for k := range s.data {
+		if !other.Contains(k) {
+			return false
+		}
+	}
+	return true
+}
