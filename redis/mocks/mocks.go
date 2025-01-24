@@ -75,7 +75,6 @@ func (m *MockClient) HIncrBy(key string, field string, value int64) redis.Result
 // HSet implements redis.Client.
 func (m *MockClient) HSet(key string, hashKey string, value interface{}) redis.Result {
 	return m.Called(key, hashKey, value).Get(0).(redis.Result)
-
 }
 
 // Incr implements redis.Client.
@@ -102,7 +101,6 @@ func (m *MockClient) LRange(key string, start int64, stop int64) redis.Result {
 // LTrim implements redis.Client.
 func (m *MockClient) LTrim(key string, start int64, stop int64) redis.Result {
 	return m.Called(key, start, stop).Get(0).(redis.Result)
-
 }
 
 // MGet implements redis.Client.
@@ -123,7 +121,6 @@ func (m *MockClient) Pipeline() redis.Pipeline {
 // RPush implements redis.Client.
 func (m *MockClient) RPush(key string, values ...interface{}) redis.Result {
 	return m.Called(append([]interface{}{key}, values...)...).Get(0).(redis.Result)
-
 }
 
 // SAdd implements redis.Client.
@@ -139,7 +136,6 @@ func (m *MockClient) SCard(key string) redis.Result {
 // SIsMember implements redis.Client.
 func (m *MockClient) SIsMember(key string, member interface{}) redis.Result {
 	return m.Called(key, member).Get(0).(redis.Result)
-
 }
 
 // SMembers implements redis.Client.
@@ -165,6 +161,11 @@ func (m *MockClient) Set(key string, value interface{}, expiration time.Duration
 // TTL implements redis.Client.
 func (m *MockClient) TTL(key string) redis.Result {
 	return m.Called(key).Get(0).(redis.Result)
+}
+
+// SetNX implements redis.Client.
+func (m *MockClient) SetNX(key string, value interface{}, expiration time.Duration) redis.Result {
+	return m.Called(key, value, expiration).Get(0).(redis.Result)
 }
 
 // Type implements redis.Client.
@@ -242,6 +243,11 @@ func (m *MockPipeline) Set(key string, value interface{}, expiration time.Durati
 	m.Called(key, value)
 }
 
+// SetNX implements redis.Pipeline.
+func (m *MockPipeline) SetNX(key string, value interface{}, expiration time.Duration) {
+	m.Called(key, value)
+}
+
 type MockResultOutput struct {
 	mock.Mock
 }
@@ -298,4 +304,9 @@ func (m *MockResultOutput) Result() (int64, error) {
 func (m *MockResultOutput) ResultString() (string, error) {
 	args := m.Called()
 	return args.String(0), args.Error(1)
+}
+
+// Val implements redis.Result.
+func (m *MockResultOutput) Val() interface{} {
+	return m.Called().Get(0)
 }

@@ -1,14 +1,12 @@
 package logging
 
 import (
+	"context"
 	"testing"
-
-	"github.com/splitio/go-toolkit/v6/logging/mocks"
 )
 
 func TestErrorLevel(t *testing.T) {
-
-	delegate := &mocks.MockLogger{}
+	delegate := &MockLogger{}
 	delegate.On("Error", "text").Once()
 	delegate.On("Errorf", "formatted %d", int(3)).Once()
 
@@ -32,7 +30,7 @@ func TestErrorLevel(t *testing.T) {
 }
 
 func TestWarningLevel(t *testing.T) {
-	delegate := &mocks.MockLogger{}
+	delegate := &MockLogger{}
 	delegate.On("Error", "text").Once()
 	delegate.On("Errorf", "formatted %d", int(3)).Once()
 	delegate.On("Warning", "text").Once()
@@ -58,7 +56,7 @@ func TestWarningLevel(t *testing.T) {
 }
 
 func TestInfoLevel(t *testing.T) {
-	delegate := &mocks.MockLogger{}
+	delegate := &MockLogger{}
 	delegate.On("Error", "text").Once()
 	delegate.On("Errorf", "formatted %d", int(3)).Once()
 	delegate.On("Warning", "text").Once()
@@ -86,7 +84,7 @@ func TestInfoLevel(t *testing.T) {
 }
 
 func TestDebugLevel(t *testing.T) {
-	delegate := &mocks.MockLogger{}
+	delegate := &MockLogger{}
 	delegate.On("Error", "text").Once()
 	delegate.On("Errorf", "formatted %d", int(3)).Once()
 	delegate.On("Warning", "text").Once()
@@ -116,7 +114,7 @@ func TestDebugLevel(t *testing.T) {
 }
 
 func TestVerboseLevel(t *testing.T) {
-	delegate := &mocks.MockLogger{}
+	delegate := &MockLogger{}
 	delegate.On("Error", "text").Once()
 	delegate.On("Errorf", "formatted %d", int(3)).Once()
 	delegate.On("Warning", "text").Once()
@@ -148,7 +146,7 @@ func TestVerboseLevel(t *testing.T) {
 }
 
 func TestAllLevel(t *testing.T) {
-	delegate := &mocks.MockLogger{}
+	delegate := &MockLogger{}
 	delegate.On("Error", "text").Once()
 	delegate.On("Errorf", "formatted %d", int(3)).Once()
 	delegate.On("Warning", "text").Once()
@@ -181,7 +179,7 @@ func TestAllLevel(t *testing.T) {
 }
 
 func TestNoneLevel(t *testing.T) {
-	delegate := &mocks.MockLogger{}
+	delegate := &MockLogger{}
 	logger := LevelFilteredLoggerWrapper{
 		delegate: delegate,
 		level:    LevelNone,
@@ -216,8 +214,9 @@ func (l *mockedLogger) Warning(msg ...interface{})            { l.msgs["Warning"
 func (l *mockedLogger) Info(msg ...interface{})               { l.msgs["Info"] = true }
 func (l *mockedLogger) Debug(msg ...interface{})              { l.msgs["Debug"] = true }
 func (l *mockedLogger) Verbose(msg ...interface{})            { l.msgs["Verbose"] = true }
-
-var _ LoggerInterface = (*mockedLogger)(nil)
+func (l *mockedLogger) WithContext(ctx context.Context) LoggerInterface {
+	panic("unimplemented")
+}
 
 func writelog(logger *ExtendedLevelFilteredLoggerWrapper) {
 	logger.ErrorFn("hello %s", func() []interface{} { return []interface{}{"world"} })
@@ -242,7 +241,6 @@ func assertWrites(t *testing.T, currentLevel string, delegate *mockedLogger, sho
 }
 
 func TestExtendedLevelFilteredLogger(t *testing.T) {
-
 	delegate := &mockedLogger{}
 	delegate.reset()
 
