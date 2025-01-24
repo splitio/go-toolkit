@@ -43,4 +43,10 @@ func TestSet(t *testing.T) {
 	e.Add(1, 2, 3, 4, 5, 6, 7, 8, 9)
 	assert.True(t, e.IsSubSet(Define(1, 2, 3)))
 	assert.False(t, e.IsSubSet(Define(1, 2, 10)))
+
+	k := New[int](10)
+	k.Add(1, 2, 3, 4, 5, 6, 7, 8, 9)
+	assert.False(t, k.IsEqual(Define(1, 2, 3)))
+	assert.True(t, k.IsEqual(Define(1, 2, 3, 4, 5, 6, 7, 8, 9)))
+	assert.False(t, k.IsEqual(Define(1, 2, 3, 4, 5, 6, 7, 8, 10)))
 }
