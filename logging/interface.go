@@ -18,6 +18,7 @@ type LoggerInterface interface {
 	Verbosef(fmt string, msg ...interface{})
 
 	WithContext(ctx context.Context) LoggerInterface
+	AugmentFromContext(ctx context.Context, values ...string) (LoggerInterface, context.Context)
 }
 
 // ParamsFn is a function that returns a slice of interface{}
