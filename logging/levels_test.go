@@ -217,6 +217,9 @@ func (l *mockedLogger) Verbose(msg ...interface{})            { l.msgs["Verbose"
 func (l *mockedLogger) WithContext(ctx context.Context) LoggerInterface {
 	panic("unimplemented")
 }
+func (l *mockedLogger) AugmentFromContext(ctx context.Context, values ...string) (LoggerInterface, context.Context) {
+	panic("unimplemented")
+}
 
 func writelog(logger *ExtendedLevelFilteredLoggerWrapper) {
 	logger.ErrorFn("hello %s", func() []interface{} { return []interface{}{"world"} })
