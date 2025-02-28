@@ -6,6 +6,8 @@ import (
 	"log"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLoggerContext(t *testing.T) {
@@ -14,6 +16,7 @@ func TestLoggerContext(t *testing.T) {
 	mW := &MockWriter{}
 	mW.On("Write", []byte(fmt.Sprintf("DEBUG - %s test\n", asFormat))).Once().Return(0, nil)
 	mW.On("Write", []byte(fmt.Sprintf("DEBUG - %s [txID=tx] test\n", asFormat))).Once().Return(0, nil)
+	mW.On("Write", []byte(fmt.Sprintf("DEBUG - %s [orgID=org, txID=tx, userID=user] test\n", asFormat))).Once().Return(0, nil)
 	logger := NewLogger(&LoggerOptions{
 		StandardLoggerFlags: log.Ldate,
 		LogLevel:            LevelVerbose,
@@ -30,6 +33,13 @@ func TestLoggerContext(t *testing.T) {
 	bg2 := context.WithValue(bg, ContextKey{}, info)
 	loggerWithContext := logger.WithContext(bg2)
 	loggerWithContext.Debug("test")
+
+	logger, ctx := loggerWithContext.AugmentFromContext(bg2, "orgID", "org", "userID", "user")
+	logger.Debug("test")
+	ctxData := ctx.Value(ContextKey{}).(*ContextData)
+	assert.Equal(t, "org", ctxData.Get("orgID"))
+	assert.Equal(t, "tx", ctxData.Get("txID"))
+	assert.Equal(t, "user", ctxData.Get("userID"))
 }
 
 func TestLoggerWrapper(t *testing.T) {

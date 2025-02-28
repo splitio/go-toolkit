@@ -128,6 +128,21 @@ func (l *Logger) WithContext(ctx context.Context) LoggerInterface {
 	}
 }
 
+// AugmentFromContext
+func (l *Logger) AugmentFromContext(ctx context.Context, values ...string) (LoggerInterface, context.Context) {
+	if len(values)%2 == 1 {
+		return nil, nil
+	}
+	newContextData := NewContext()
+	for i := 0; i < len(values); i += 2 {
+		newContextData = newContextData.WithTag(values[i], values[i+1])
+	}
+	contextData := Merge(l.contextData, newContextData)
+	ctx = context.WithValue(ctx, ContextKey{}, contextData)
+
+	return l.WithContext(ctx), ctx
+}
+
 func normalizeOptions(options *LoggerOptions) *LoggerOptions {
 	var toRet *LoggerOptions
 	if options == nil {

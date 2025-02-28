@@ -67,6 +67,12 @@ func (l *MockLogger) WithContext(ctx context.Context) LoggerInterface {
 	return args.Get(0).(LoggerInterface)
 }
 
+// AugmentFromContext implements logging.LoggerInterface.
+func (l *MockLogger) AugmentFromContext(ctx context.Context, values ...string) (LoggerInterface, context.Context) {
+	args := l.Called(ctx, values)
+	return args.Get(0).(LoggerInterface), args.Get(1).(context.Context)
+}
+
 type MockWriter struct {
 	mock.Mock
 }

@@ -120,6 +120,15 @@ func (l *LevelFilteredLoggerWrapper) WithContext(ctx context.Context) LoggerInte
 	}
 }
 
+// AugmentFromContext
+func (l *LevelFilteredLoggerWrapper) AugmentFromContext(ctx context.Context, values ...string) (LoggerInterface, context.Context) {
+	extLogger, ctx := l.delegate.AugmentFromContext(ctx, values...)
+	return &LevelFilteredLoggerWrapper{
+		delegate: extLogger,
+		level:    l.level,
+	}, ctx
+}
+
 var _ LoggerInterface = (*LevelFilteredLoggerWrapper)(nil)
 
 var levels map[string]int = map[string]int{
