@@ -154,7 +154,7 @@ func (l *Logger) Clone(options ...LoggerOptions) LoggerInterface {
 		VerboseWriter:       l.verboseLogger.Writer(),
 		LogLevel:            l.level,
 		StandardLoggerFlags: l.debugLogger.Flags(),
-		ExtraFramesToSkip:   l.framesToSkip - skipStackFrameBase,
+		ExtraFramesToSkip:   l.framesToSkip - skipStackFrameBase + 1,
 	}
 
 	for _, opt := range options {

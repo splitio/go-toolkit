@@ -69,9 +69,9 @@ func TestClone(t *testing.T) {
 	today := time.Now()
 	asFormat := fmt.Sprintf("%d/%02d/%02d", today.Year(), today.Month(), today.Day())
 	mW := &MockWriter{}
-	mW.On("Write", []byte(fmt.Sprintf("DEBUG - %s test\n", asFormat))).Once().Return(0, nil)
+	mW.On("Write", []byte(fmt.Sprintf("DEBUG - %s logging_test.go:82: test\n", asFormat))).Once().Return(0, nil)
 	logger := NewLogger(&LoggerOptions{
-		StandardLoggerFlags: log.Ldate,
+		StandardLoggerFlags: log.Ldate | log.Lshortfile,
 		LogLevel:            LevelVerbose,
 		ErrorWriter:         mW,
 		WarningWriter:       mW,
@@ -82,10 +82,17 @@ func TestClone(t *testing.T) {
 	logger.Debug("test")
 
 	mW2 := &MockWriter{}
-	mW2.On("Write", []byte(fmt.Sprintf("ERROR - %s test\n", asFormat))).Once().Return(0, nil)
+	mW2.On("Write", []byte(fmt.Sprintf("ERROR - %s logging_test.go:87: test\n", asFormat))).Once().Return(0, nil)
 	logger2 := logger.Clone(LoggerOptions{LogLevel: LevelError}, LoggerOptions{ErrorWriter: mW2})
 	logger2.Error("test")
 	logger2.Debug("test")
+
+	mW3 := &MockWriter{}
+	mW3.On("Write", []byte(fmt.Sprintf("ERROR - %s logging_test.go:93: test\n", asFormat))).Once().Return(0, nil)
+	logger3 := logger.Clone(LoggerOptions{LogLevel: LevelError}, LoggerOptions{ErrorWriter: mW3})
+	logger3.Error("test")
+
 	mW.AssertExpectations(t)
 	mW2.AssertExpectations(t)
+	mW3.AssertExpectations(t)
 }
