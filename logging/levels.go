@@ -129,6 +129,15 @@ func (l *LevelFilteredLoggerWrapper) AugmentFromContext(ctx context.Context, val
 	}, ctx
 }
 
+// Clone
+func (l *LevelFilteredLoggerWrapper) Clone(options ...LoggerOptions) LoggerInterface {
+	extLogger := l.delegate.Clone(options...)
+	return &LevelFilteredLoggerWrapper{
+		delegate: extLogger,
+		level:    l.level,
+	}
+}
+
 var _ LoggerInterface = (*LevelFilteredLoggerWrapper)(nil)
 
 var levels map[string]int = map[string]int{

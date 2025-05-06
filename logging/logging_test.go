@@ -64,3 +64,28 @@ func TestLoggerWrapper(t *testing.T) {
 	other := loggerWithContext.WithContext(bg)
 	other.Debugf("PreProcess executed successful %s", "test")
 }
+
+func TestClone(t *testing.T) {
+	today := time.Now()
+	asFormat := fmt.Sprintf("%d/%02d/%02d", today.Year(), today.Month(), today.Day())
+	mW := &MockWriter{}
+	mW.On("Write", []byte(fmt.Sprintf("DEBUG - %s test\n", asFormat))).Once().Return(0, nil)
+	logger := NewLogger(&LoggerOptions{
+		StandardLoggerFlags: log.Ldate,
+		LogLevel:            LevelVerbose,
+		ErrorWriter:         mW,
+		WarningWriter:       mW,
+		InfoWriter:          mW,
+		DebugWriter:         mW,
+		VerboseWriter:       mW,
+	})
+	logger.Debug("test")
+
+	mW2 := &MockWriter{}
+	mW2.On("Write", []byte(fmt.Sprintf("ERROR - %s test\n", asFormat))).Once().Return(0, nil)
+	logger2 := logger.Clone(LoggerOptions{LogLevel: LevelError}, LoggerOptions{ErrorWriter: mW2})
+	logger2.Error("test")
+	logger2.Debug("test")
+	mW.AssertExpectations(t)
+	mW2.AssertExpectations(t)
+}

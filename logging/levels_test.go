@@ -220,6 +220,9 @@ func (l *mockedLogger) WithContext(ctx context.Context) LoggerInterface {
 func (l *mockedLogger) AugmentFromContext(ctx context.Context, values ...string) (LoggerInterface, context.Context) {
 	panic("unimplemented")
 }
+func (l *mockedLogger) Clone(options ...LoggerOptions) LoggerInterface {
+	panic("unimplemented")
+}
 
 func writelog(logger *ExtendedLevelFilteredLoggerWrapper) {
 	logger.ErrorFn("hello %s", func() []interface{} { return []interface{}{"world"} })
