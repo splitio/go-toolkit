@@ -39,6 +39,7 @@ type Logger struct {
 	errorLogger   *log.Logger
 	verboseLogger *log.Logger
 	framesToSkip  int
+	level         int
 
 	contextData   *ContextData
 	stringContext string
@@ -143,6 +144,46 @@ func (l *Logger) AugmentFromContext(ctx context.Context, values ...string) (Logg
 	return l.WithContext(ctx), ctx
 }
 
+// Clone creates a new logger with the same options as the current one
+func (l *Logger) Clone(options ...LoggerOptions) LoggerInterface {
+	opts := &LoggerOptions{
+		DebugWriter:         l.debugLogger.Writer(),
+		InfoWriter:          l.infoLogger.Writer(),
+		WarningWriter:       l.warningLogger.Writer(),
+		ErrorWriter:         l.errorLogger.Writer(),
+		VerboseWriter:       l.verboseLogger.Writer(),
+		LogLevel:            l.level,
+		StandardLoggerFlags: l.debugLogger.Flags(),
+		ExtraFramesToSkip:   l.framesToSkip - skipStackFrameBase + 1,
+	}
+
+	for _, opt := range options {
+		if opt.DebugWriter != nil {
+			opts.DebugWriter = opt.DebugWriter
+		}
+		if opt.InfoWriter != nil {
+			opts.InfoWriter = opt.InfoWriter
+		}
+		if opt.WarningWriter != nil {
+			opts.WarningWriter = opt.WarningWriter
+		}
+		if opt.ErrorWriter != nil {
+			opts.ErrorWriter = opt.ErrorWriter
+		}
+		if opt.VerboseWriter != nil {
+			opts.VerboseWriter = opt.VerboseWriter
+		}
+		if opt.StandardLoggerFlags != 0 {
+			opts.StandardLoggerFlags = opt.StandardLoggerFlags
+		}
+		if opt.LogLevel != 0 {
+			opts.LogLevel = opt.LogLevel
+		}
+	}
+
+	return NewLogger(opts)
+}
+
 func normalizeOptions(options *LoggerOptions) *LoggerOptions {
 	var toRet *LoggerOptions
 	if options == nil {
@@ -200,6 +241,7 @@ func newLogger(options *LoggerOptions) *Logger {
 		verboseLogger: log.New(options.VerboseWriter, fmt.Sprintf("%sVERBOSE - ", prefix), options.StandardLoggerFlags),
 		framesToSkip:  skipStackFrameBase + options.ExtraFramesToSkip,
 		stringContext: "",
+		level:         options.LogLevel,
 	}
 }
 
