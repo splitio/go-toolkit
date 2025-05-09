@@ -83,13 +83,13 @@ func TestClone(t *testing.T) {
 
 	mW2 := &MockWriter{}
 	mW2.On("Write", []byte(fmt.Sprintf("ERROR - %s logging_test.go:87: test\n", asFormat))).Once().Return(0, nil)
-	logger2 := logger.Clone(LoggerOptions{LogLevel: LevelError}, LoggerOptions{ErrorWriter: mW2})
+	logger2 := logger.Clone(LoggerOptions{LogLevel: LevelError, ErrorWriter: mW2})
 	logger2.Error("test")
 	logger2.Debug("test")
 
 	mW3 := &MockWriter{}
 	mW3.On("Write", []byte(fmt.Sprintf("ERROR - %s logging_test.go:93: test\n", asFormat))).Once().Return(0, nil)
-	logger3 := logger.Clone(LoggerOptions{LogLevel: LevelError}, LoggerOptions{ErrorWriter: mW3})
+	logger3 := logger.Clone(LoggerOptions{LogLevel: LevelError, ErrorWriter: mW3})
 	logger3.Error("test")
 
 	mW.AssertExpectations(t)
