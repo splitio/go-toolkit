@@ -145,7 +145,7 @@ func (l *Logger) AugmentFromContext(ctx context.Context, values ...string) (Logg
 }
 
 // Clone creates a new logger with the same options as the current one
-func (l *Logger) Clone(options ...LoggerOptions) LoggerInterface {
+func (l *Logger) Clone(opt LoggerOptions) LoggerInterface {
 	opts := &LoggerOptions{
 		DebugWriter:         l.debugLogger.Writer(),
 		InfoWriter:          l.infoLogger.Writer(),
@@ -157,28 +157,26 @@ func (l *Logger) Clone(options ...LoggerOptions) LoggerInterface {
 		ExtraFramesToSkip:   l.framesToSkip - skipStackFrameBase + 1,
 	}
 
-	for _, opt := range options {
-		if opt.DebugWriter != nil {
-			opts.DebugWriter = opt.DebugWriter
-		}
-		if opt.InfoWriter != nil {
-			opts.InfoWriter = opt.InfoWriter
-		}
-		if opt.WarningWriter != nil {
-			opts.WarningWriter = opt.WarningWriter
-		}
-		if opt.ErrorWriter != nil {
-			opts.ErrorWriter = opt.ErrorWriter
-		}
-		if opt.VerboseWriter != nil {
-			opts.VerboseWriter = opt.VerboseWriter
-		}
-		if opt.StandardLoggerFlags != 0 {
-			opts.StandardLoggerFlags = opt.StandardLoggerFlags
-		}
-		if opt.LogLevel != 0 {
-			opts.LogLevel = opt.LogLevel
-		}
+	if opt.DebugWriter != nil {
+		opts.DebugWriter = opt.DebugWriter
+	}
+	if opt.InfoWriter != nil {
+		opts.InfoWriter = opt.InfoWriter
+	}
+	if opt.WarningWriter != nil {
+		opts.WarningWriter = opt.WarningWriter
+	}
+	if opt.ErrorWriter != nil {
+		opts.ErrorWriter = opt.ErrorWriter
+	}
+	if opt.VerboseWriter != nil {
+		opts.VerboseWriter = opt.VerboseWriter
+	}
+	if opt.StandardLoggerFlags != 0 {
+		opts.StandardLoggerFlags = opt.StandardLoggerFlags
+	}
+	if opt.LogLevel != 0 {
+		opts.LogLevel = opt.LogLevel
 	}
 
 	return NewLogger(opts)

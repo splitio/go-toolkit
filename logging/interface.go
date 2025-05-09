@@ -19,7 +19,7 @@ type LoggerInterface interface {
 
 	WithContext(ctx context.Context) LoggerInterface
 	AugmentFromContext(ctx context.Context, values ...string) (LoggerInterface, context.Context)
-	Clone(options ...LoggerOptions) LoggerInterface
+	Clone(options LoggerOptions) LoggerInterface
 }
 
 // ParamsFn is a function that returns a slice of interface{}
