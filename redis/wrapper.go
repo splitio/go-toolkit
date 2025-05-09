@@ -24,6 +24,7 @@ type Result interface {
 	MultiInterface() ([]interface{}, error)
 	Err() error
 	MapStringString() (map[string]string, error)
+	Val() interface{}
 }
 
 // ResultImpl generic interface
@@ -32,6 +33,7 @@ type ResultImpl struct {
 	valueString     string
 	valueBool       bool
 	valueDuration   time.Duration
+	valueInterface  interface{}
 	err             error
 	multi           []string
 	multiInterface  []interface{}
@@ -88,6 +90,11 @@ func (r *ResultImpl) MapStringString() (map[string]string, error) {
 	return r.mapStringString, r.err
 }
 
+// Val implementation
+func (r *ResultImpl) Val() interface{} {
+	return r.valueInterface
+}
+
 // Pipeline defines the interface of a redis pipeline
 type Pipeline interface {
 	LRange(key string, start, stop int64)
@@ -102,6 +109,7 @@ type Pipeline interface {
 	SRem(key string, members ...interface{})
 	SMembers(key string)
 	Del(keys ...string)
+	SetNX(key string, value interface{}, expiration time.Duration)
 	Exec() ([]Result, error)
 }
 
@@ -170,6 +178,11 @@ func (p *PipelineImpl) Del(keys ...string) {
 	p.wrapped.Del(context.TODO(), keys...)
 }
 
+// SetNX schedules a SetNX operation on this pipeline
+func (p *PipelineImpl) SetNX(key string, value interface{}, expiration time.Duration) {
+	p.wrapped.SetNX(context.TODO(), key, value, expiration)
+}
+
 // Exec executes the pipeline
 func (p *PipelineImpl) Exec() ([]Result, error) {
 	res, err := p.wrapped.Exec(context.TODO())
@@ -217,6 +230,7 @@ type Client interface {
 	HIncrBy(key string, field string, value int64) Result
 	HSet(key string, hashKey string, value interface{}) Result
 	HGetAll(key string) Result
+	SetNX(key string, value interface{}, expiration time.Duration) Result
 	Type(key string) Result
 	Pipeline() Pipeline
 	Scan(cursor uint64, match string, count int64) Result
@@ -395,6 +409,12 @@ func (c *ClientImpl) HGetAll(key string) Result {
 	return wrapResult(res)
 }
 
+// SetNX implements SetNX wrapper for redis
+func (c *ClientImpl) SetNX(key string, value interface{}, expiration time.Duration) Result {
+	res := c.wrapped.SetNX(context.TODO(), key, value, expiration)
+	return wrapResult(res)
+}
+
 // Type implements Type wrapper for redis
 func (c *ClientImpl) Type(key string) Result {
 	res := c.wrapped.Type(context.TODO(), key)
@@ -468,7 +488,9 @@ func wrapResult(result interface{}) Result {
 		}
 	case *redis.Cmd:
 		return &ResultImpl{
-			err: v.Err(),
+			err:            v.Err(),
+			valueString:    v.String(),
+			valueInterface: v.Val(),
 		}
 	case *redis.MapStringStringCmd:
 		return &ResultImpl{

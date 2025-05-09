@@ -1,6 +1,7 @@
 package logging
 
 import (
+	"context"
 	"fmt"
 	"math"
 )
@@ -75,6 +76,69 @@ func (l *LevelFilteredLoggerWrapper) Verbose(is ...interface{}) {
 		l.delegate.Verbose(is...)
 	}
 }
+
+// Debugf implements LoggerInterface.
+func (l *LevelFilteredLoggerWrapper) Debugf(fmt string, args ...interface{}) {
+	if l.level >= LevelDebug {
+		l.delegate.Debugf(fmt, args...)
+	}
+}
+
+// Errorf implements LoggerInterface.
+func (l *LevelFilteredLoggerWrapper) Errorf(fmt string, args ...interface{}) {
+	if l.level >= LevelError {
+		l.delegate.Errorf(fmt, args...)
+	}
+}
+
+// Infof implements LoggerInterface.
+func (l *LevelFilteredLoggerWrapper) Infof(fmt string, args ...interface{}) {
+	if l.level >= LevelInfo {
+		l.delegate.Infof(fmt, args...)
+	}
+}
+
+// Verbosef implements LoggerInterface.
+func (l *LevelFilteredLoggerWrapper) Verbosef(fmt string, args ...interface{}) {
+	if l.level >= LevelVerbose {
+		l.delegate.Verbosef(fmt, args...)
+	}
+}
+
+// Warningf implements LoggerInterface.
+func (l *LevelFilteredLoggerWrapper) Warningf(fmt string, args ...interface{}) {
+	if l.level >= LevelWarning {
+		l.delegate.Warningf(fmt, args...)
+	}
+}
+
+// WithContext
+func (l *LevelFilteredLoggerWrapper) WithContext(ctx context.Context) LoggerInterface {
+	return &LevelFilteredLoggerWrapper{
+		delegate: l.delegate.WithContext(ctx),
+		level:    l.level,
+	}
+}
+
+// AugmentFromContext
+func (l *LevelFilteredLoggerWrapper) AugmentFromContext(ctx context.Context, values ...string) (LoggerInterface, context.Context) {
+	extLogger, ctx := l.delegate.AugmentFromContext(ctx, values...)
+	return &LevelFilteredLoggerWrapper{
+		delegate: extLogger,
+		level:    l.level,
+	}, ctx
+}
+
+// Clone
+func (l *LevelFilteredLoggerWrapper) Clone(options LoggerOptions) LoggerInterface {
+	extLogger := l.delegate.Clone(options)
+	return &LevelFilteredLoggerWrapper{
+		delegate: extLogger,
+		level:    l.level,
+	}
+}
+
+var _ LoggerInterface = (*LevelFilteredLoggerWrapper)(nil)
 
 var levels map[string]int = map[string]int{
 	"ERROR":   LevelError,

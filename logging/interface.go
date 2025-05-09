@@ -1,5 +1,7 @@
 package logging
 
+import "context"
+
 // LoggerInterface ...
 // If a custom logger object is to be used, it should comply with the following
 // interface. (Standard go-lang library log.Logger.Println method signature)
@@ -9,6 +11,15 @@ type LoggerInterface interface {
 	Info(msg ...interface{})
 	Debug(msg ...interface{})
 	Verbose(msg ...interface{})
+	Errorf(fmt string, msg ...interface{})
+	Warningf(fmt string, msg ...interface{})
+	Infof(fmt string, msg ...interface{})
+	Debugf(fmt string, msg ...interface{})
+	Verbosef(fmt string, msg ...interface{})
+
+	WithContext(ctx context.Context) LoggerInterface
+	AugmentFromContext(ctx context.Context, values ...string) (LoggerInterface, context.Context)
+	Clone(options LoggerOptions) LoggerInterface
 }
 
 // ParamsFn is a function that returns a slice of interface{}

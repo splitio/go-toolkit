@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/splitio/go-toolkit/v5/logging"
+	"github.com/splitio/go-toolkit/v6/logging"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAsyncTaskNormalOperation(t *testing.T) {
@@ -29,27 +30,14 @@ func TestAsyncTaskNormalOperation(t *testing.T) {
 
 	task1.Start()
 	time.Sleep(1 * time.Second)
-	if !task1.IsRunning() {
-		t.Error("Task should be running")
-	}
+	assert.True(t, task1.IsRunning())
+
 	time.Sleep(1 * time.Second)
-
 	task1.Stop(true)
-	if task1.IsRunning() {
-		t.Error("Task should be stopped")
-	}
-
-	if !onInit.Load().(bool) {
-		t.Error("Initialization hook not executed")
-	}
-
-	if !onExecution.Load().(bool) {
-		t.Error("Main task function not executed")
-	}
-
-	if !onStop.Load().(bool) {
-		t.Error("After execution function not executed")
-	}
+	assert.False(t, task1.IsRunning())
+	assert.True(t, onInit.Load().(bool))
+	assert.True(t, onExecution.Load().(bool))
+	assert.True(t, onStop.Load().(bool))
 }
 
 func TestAsyncTaskPanics(t *testing.T) {
@@ -94,15 +82,10 @@ func TestAsyncTaskPanics(t *testing.T) {
 	task3.Start()
 	time.Sleep(time.Second * 2)
 	task3.Stop(true)
-	if task1.IsRunning() {
-		t.Error("Task1 is running and should be stopped")
-	}
-	if task2.IsRunning() {
-		t.Error("Task2 is running and should be stopped")
-	}
-	if task3.IsRunning() {
-		t.Error("Task3 is running and should be stopped")
-	}
+
+	assert.False(t, task1.IsRunning())
+	assert.False(t, task2.IsRunning())
+	assert.False(t, task3.IsRunning())
 }
 
 func TestAsyncTaskErrors(t *testing.T) {
@@ -138,9 +121,8 @@ func TestAsyncTaskErrors(t *testing.T) {
 
 	task2.Start()
 	time.Sleep(2 * time.Second)
-	if res.Load().(int) != 0 {
-		t.Error("Task should have never executed if there was an error when calling onInit()")
-	}
+
+	assert.Equal(t, int(0), res.Load().(int))
 }
 
 func TestAsyncTaskWakeUp(t *testing.T) {
@@ -163,7 +145,5 @@ func TestAsyncTaskWakeUp(t *testing.T) {
 	_ = task1.WakeUp()
 	_ = task1.Stop(true)
 
-	if atomic.LoadInt32(&res) != 3 {
-		t.Errorf("Task shuld have executed 4 times. It ran %d times", res)
-	}
+	assert.Equal(t, int32(3), atomic.LoadInt32(&res))
 }

@@ -8,7 +8,7 @@ import (
 // Miss is a special type of error indicating that a key was not found
 type Miss struct {
 	Where string
-	Key   string
+	Key   interface{}
 }
 
 func (c *Miss) Error() string {
@@ -17,7 +17,7 @@ func (c *Miss) Error() string {
 
 // Expired is a special type of error indicating that a key is no longer valid (value is still attached in the error)
 type Expired struct {
-	Key   string
+	Key   interface{}
 	When  time.Time
 	Value interface{}
 }

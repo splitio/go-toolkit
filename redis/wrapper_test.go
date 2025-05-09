@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"github.com/splitio/go-toolkit/v5/testhelpers"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRedisWrapperKeysAndScan(t *testing.T) {
@@ -18,28 +18,19 @@ func TestRedisWrapperKeysAndScan(t *testing.T) {
 	}
 
 	keys, err := client.Keys("utest*").Multi()
-	if err != nil {
-		t.Error("there should not be any error. Got: ", err)
-	}
-
-	if len(keys) != 10 {
-		t.Error("should be 10 keys. Got: ", len(keys))
-	}
-
+	assert.Nil(t, err)
+	assert.Equal(t, 10, len(keys))
 	var cursor uint64
+
 	scanKeys := make([]string, 0)
 	for {
 		result := client.Scan(cursor, "utest*", 10)
-		if result.Err() != nil {
-			t.Error("there should not be any error. Got: ", result.Err())
-		}
+		assert.Nil(t, result.Err())
 
 		cursor = uint64(result.Int())
 
 		keys, err := result.Multi()
-		if err != nil {
-			t.Error("there should not be any error. Got: ", err)
-		}
+		assert.Nil(t, err)
 
 		scanKeys = append(scanKeys, keys...)
 
@@ -48,10 +39,7 @@ func TestRedisWrapperKeysAndScan(t *testing.T) {
 		}
 	}
 
-	if len(scanKeys) != 10 {
-		t.Error("should be 10 keys. Got: ", len(scanKeys))
-	}
-
+	assert.Equal(t, 10, len(scanKeys))
 	for i := 0; i < 10; i++ {
 		client.Del(fmt.Sprintf("utest.key-del%d", i))
 	}
@@ -61,12 +49,25 @@ func TestRedisWrapperPipeline(t *testing.T) {
 	rc := redis.NewUniversalClient(&redis.UniversalOptions{})
 	client := &ClientImpl{wrapped: rc}
 
-	client.Del("key1")
-	client.Del("key-test")
-	client.Del("key-set")
 	client.RPush("key1", "e1", "e2", "e3")
-	client.Set("key-del1", 0, 1*time.Hour)
-	client.Set("key-del2", 0, 1*time.Hour)
+	client.Set("key-del1", 10, 1*time.Hour)
+	client.Set("key-del2", 20, 1*time.Hour)
+	res := client.SetNX("key-setnx-cient", "field-test-1", 1*time.Hour)
+	assert.True(t, res.Bool(), "setnx should be executed successfully")
+	client.Del("key-setnx-cient")
+
+	script := `
+	if redis.call("get", KEYS[1]) == ARGV[1] then
+		return 10
+	else
+		return 20
+	end
+	`
+
+	res = client.Eval(script, []string{"key-del1"}, "0")
+	assert.Equal(t, int64(20), res.Val())
+	res = client.Eval(script, []string{"key-del1"}, "10")
+	assert.Equal(t, int64(10), res.Val())
 
 	pipe := client.Pipeline()
 	pipe.LRange("key1", 0, 5)
@@ -82,66 +83,30 @@ func TestRedisWrapperPipeline(t *testing.T) {
 	pipe.SRem("key-sadd", []interface{}{"field-test-1", "field-test-2"})
 	pipe.Incr("key-incr")
 	pipe.Decr("key-incr")
-	pipe.Del([]string{"key-del1", "key-del2"}...)
+	pipe.SetNX("key-setnx", "field-test-1", 30*time.Minute)
+	pipe.Del([]string{"key-del1", "key-del2", "key-setnx"}...)
 	result, err := pipe.Exec()
-	if err != nil {
-		t.Error("there should not be any error. Got: ", err)
-	}
-
-	if len(result) != 14 {
-		t.Error("there should be 13 elements")
-	}
+	assert.Nil(t, err)
+	assert.Equal(t, 15, len(result))
 
 	items, _ := result[0].Multi()
-	testhelpers.AssertStringSliceEquals(t, items, []string{"e1", "e2", "e3"}, "result of lrange should be e1,e2,e3")
-	if l := result[1].Int(); l != 3 {
-		t.Error("length should be 3. is: ", l)
-	}
+	assert.Equal(t, []string{"e1", "e2", "e3"}, items)
+	assert.Equal(t, int64(3), result[1].Int())
+	assert.Equal(t, int64(1), client.LLen("key1").Int())
+	assert.Equal(t, int64(5), result[3].Int())
+	assert.Equal(t, int64(4), result[4].Int())
+	assert.Equal(t, int64(7), result[5].Int())
+	assert.Equal(t, int64(2), result[6].Int())
+	assert.Equal(t, int64(6), client.HIncrBy("key-test", "field-test", 1).Int())
+	assert.Equal(t, "field-test-1", client.Get("key-set").String())
+	assert.Equal(t, int64(2), result[8].Int())
+	d, _ := result[9].Multi()
+	assert.Equal(t, 2, len(d))
+	assert.Equal(t, int64(2), result[10].Int())
+	assert.Equal(t, int64(1), result[11].Int())
+	assert.Equal(t, int64(0), result[12].Int())
+	assert.True(t, result[13].Bool(), "setnx should be executed successfully")
+	assert.Equal(t, int64(3), result[14].Int())
 
-	if i := client.LLen("key1").Int(); i != 1 {
-		t.Error("new length should be 1. Is: ", i)
-	}
-
-	if c := result[3].Int(); c != 5 {
-		t.Error("count should be 5. Is: ", c)
-	}
-
-	if c := result[4].Int(); c != 4 {
-		t.Error("count should be 5. Is: ", c)
-	}
-
-	if c := result[5].Int(); c != 7 {
-		t.Error("count should be 5. Is: ", c)
-	}
-
-	if l := result[6].Int(); l != 2 {
-		t.Error("hlen should be 2. is: ", l)
-	}
-
-	if ib := client.HIncrBy("key-test", "field-test", 1); ib.Int() != 6 {
-		t.Error("new count should be 6")
-	}
-
-	if ib := client.Get("key-set"); ib.String() != "field-test-1" {
-		t.Error("it should be field-test-1")
-	}
-
-	if c := result[8].Int(); c != 2 {
-		t.Error("count should be 2. Is: ", c)
-	}
-	if d, _ := result[9].Multi(); len(d) != 2 {
-		t.Error("count should be 2. Is: ", len(d))
-	}
-	if c := result[10].Int(); c != 2 {
-		t.Error("count should be 2. Is: ", c)
-	}
-	if c := result[11].Int(); c != 1 {
-		t.Error("count should be 1. Is: ", c)
-	}
-	if c := result[12].Int(); c != 0 {
-		t.Error("count should be zero. Is: ", c)
-	}
-	if c := result[13].Int(); c != 2 {
-		t.Error("count should be 2. Is: ", c)
-	}
+	client.Del([]string{"key1", "key-test", "key-set", "key-incr"}...)
 }
