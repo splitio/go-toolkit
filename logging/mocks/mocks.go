@@ -1,5 +1,11 @@
 package mocks
 
+import (
+	"github.com/splitio/go-toolkit/v5/logging"
+
+	"github.com/stretchr/testify/mock"
+)
+
 type MockLogger struct {
 	ErrorCall   func(msg ...interface{})
 	WarningCall func(msg ...interface{})
@@ -27,3 +33,30 @@ func (l *MockLogger) Debug(msg ...interface{}) {
 func (l *MockLogger) Verbose(msg ...interface{}) {
 	l.VerboseCall(msg...)
 }
+
+type LoggerMock struct {
+	mock.Mock
+}
+
+func (l *LoggerMock) Debug(msg ...interface{}) {
+	l.Called(msg)
+}
+
+func (l *LoggerMock) Info(msg ...interface{}) {
+	l.Called(msg)
+}
+
+func (l *LoggerMock) Warning(msg ...interface{}) {
+	l.Called(msg)
+}
+
+func (l *LoggerMock) Error(msg ...interface{}) {
+	l.Called(msg)
+}
+
+func (l *LoggerMock) Verbose(msg ...interface{}) {
+	l.Called(msg)
+}
+
+var _ logging.LoggerInterface = (*LoggerMock)(nil)
+var _ logging.LoggerInterface = (*MockLogger)(nil)
