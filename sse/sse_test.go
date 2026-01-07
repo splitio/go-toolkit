@@ -229,7 +229,7 @@ func (f fakeRawEvent) Retry() int64  { return 0 }
 func (f fakeRawEvent) IsError() bool { return false }
 func (f fakeRawEvent) IsEmpty() bool { return false }
 
-func TestProcessEvents_ClosureBug_WithInterface(t *testing.T) {
+func TestProcessEventsClosureBugWithInterface(t *testing.T) {
 	const n = 200
 
 	events := make([]RawEvent, n)
