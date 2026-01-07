@@ -65,11 +65,6 @@ func (l *Manager) BeginShutdown() bool {
 	default:
 	}
 
-	l.c.L.Lock()
-	atomic.StoreInt32(&l.status, StatusIdle)
-	l.c.Broadcast()
-	l.c.L.Unlock()
-
 	return true
 }
 
