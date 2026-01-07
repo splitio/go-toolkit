@@ -4,6 +4,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestLifecycleManager(t *testing.T) {
@@ -230,5 +232,47 @@ func TestShutdownRequestWhileInitNotComplete(t *testing.T) {
 
 	if atomic.LoadInt32(&executed) != 0 {
 		t.Error("the goroutine should have not executed further than the InitializationComplete check.")
+	}
+}
+
+func TestInitializationCancelledEventuallyBecomesIdle(t *testing.T) {
+	var m Manager
+	m.Setup()
+
+	require.True(t, m.BeginInitialization())
+	require.True(t, m.BeginShutdown()) // cancela init
+
+	done := make(chan struct{})
+	go func() {
+		m.AwaitShutdownComplete()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("initialization cancellation never transitions to Idle")
+	}
+}
+
+func TestShutdownWithoutWorkerDoesNotHang(t *testing.T) {
+	var m Manager
+	m.Setup()
+
+	require.True(t, m.BeginInitialization())
+	require.True(t, m.InitializationComplete())
+
+	require.True(t, m.BeginShutdown())
+
+	done := make(chan struct{})
+	go func() {
+		m.AwaitShutdownComplete()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(200 * time.Millisecond):
+		t.Fatal("shutdown hangs forever waiting for ShutdownComplete")
 	}
 }

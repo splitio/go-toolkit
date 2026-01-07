@@ -49,6 +49,10 @@ func (l *Manager) InitializationComplete() bool {
 func (l *Manager) BeginShutdown() bool {
 	// If we're currently initializing but not yet running, just change the status.
 	if atomic.CompareAndSwapInt32(&l.status, StatusStarting, StatusInitializationCancelled) {
+		l.c.L.Lock()
+		atomic.StoreInt32(&l.status, StatusIdle)
+		l.c.Broadcast()
+		l.c.L.Unlock()
 		return true
 	}
 
@@ -56,7 +60,16 @@ func (l *Manager) BeginShutdown() bool {
 		return false
 	}
 
-	l.shutdown <- struct{}{}
+	select {
+	case l.shutdown <- struct{}{}:
+	default:
+	}
+
+	l.c.L.Lock()
+	atomic.StoreInt32(&l.status, StatusIdle)
+	l.c.Broadcast()
+	l.c.L.Unlock()
+
 	return true
 }
 
