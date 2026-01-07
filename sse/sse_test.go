@@ -218,6 +218,66 @@ func TestConnectionEOF(t *testing.T) {
 	mockedClient.Shutdown(true)
 }
 
+type fakeRawEvent struct {
+	id int
+}
+
+func (f fakeRawEvent) ID() string    { return fmt.Sprintf("%d", f.id) }
+func (f fakeRawEvent) Event() string { return "test" }
+func (f fakeRawEvent) Data() string  { return "data" }
+func (f fakeRawEvent) Retry() int64  { return 0 }
+func (f fakeRawEvent) IsError() bool { return false }
+func (f fakeRawEvent) IsEmpty() bool { return false }
+
+func TestProcessEvents_ClosureBug_WithInterface(t *testing.T) {
+	const n = 200
+
+	events := make([]RawEvent, n)
+	for i := 0; i < n; i++ {
+		events[i] = fakeRawEvent{id: i}
+	}
+
+	received := make([]string, 0, n)
+	var mu sync.Mutex
+
+	processEventsBug(events, func(e RawEvent) {
+		mu.Lock()
+		received = append(received, e.ID())
+		mu.Unlock()
+	})
+
+	if len(received) != n {
+		t.Fatalf("expected %d events, got %d", n, len(received))
+	}
+
+	unique := map[string]bool{}
+	for _, id := range received {
+		unique[id] = true
+	}
+
+	if len(unique) != n {
+		t.Fatalf(
+			"expected %d unique events, got %d (closure bug exposed)",
+			n,
+			len(unique),
+		)
+	}
+}
+
+func processEventsBug(events []RawEvent, callback func(RawEvent)) {
+	var wg sync.WaitGroup
+
+	for _, event := range events {
+		wg.Add(1)
+		go func(ev RawEvent) {
+			defer wg.Done()
+			callback(ev)
+		}(event)
+	}
+
+	wg.Wait()
+}
+
 /*
 func TestCustom(t *testing.T) {
 	url := `https://streaming.split.io/event-stream`

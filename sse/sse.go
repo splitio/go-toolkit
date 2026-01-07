@@ -49,28 +49,35 @@ func NewClient(url string, keepAlive int, dialTimeout int, logger logging.Logger
 	return client, nil
 }
 
-func (l *Client) readEvents(in *bufio.Reader, out chan<- RawEvent) {
+func (l *Client) readEvents(ctx context.Context, in *bufio.Reader, out chan<- RawEvent) {
 	eventBuilder := NewEventBuilder()
-	for {
-		line, err := in.ReadString(endOfLineChar)
-		l.logger.Debug("Incoming SSE line: ", line)
-		if err != nil {
-			if l.lifecycle.IsRunning() { // If it's supposed to be running, log an error
-				l.logger.Error(err)
-			}
-			close(out)
-			return
-		}
-		if line != endOfLineStr {
-			eventBuilder.AddLine(line)
-			continue
+	defer close(out)
+	defer l.logger.Info("SSE reader goroutine exited")
 
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			line, err := in.ReadString(endOfLineChar)
+			l.logger.Debug("Incoming SSE line: ", line)
+			if err != nil {
+				if l.lifecycle.IsRunning() {
+					l.logger.Error(err)
+				}
+				return
+			}
+
+			if line != endOfLineStr {
+				eventBuilder.AddLine(line)
+				continue
+			}
+
+			if event := eventBuilder.Build(); event != nil {
+				out <- event
+			}
+			eventBuilder.Reset()
 		}
-		l.logger.Debug("Building SSE event")
-		if event := eventBuilder.Build(); event != nil {
-			out <- event
-		}
-		eventBuilder.Reset()
 	}
 }
 
@@ -116,7 +123,11 @@ func (l *Client) Do(params map[string]string, headers map[string]string, callbac
 
 	reader := bufio.NewReader(resp.Body)
 	eventChannel := make(chan RawEvent, 1000)
-	go l.readEvents(reader, eventChannel)
+	activeGoroutines.Add(1)
+	go func() {
+		defer activeGoroutines.Done()
+		l.readEvents(ctx, reader, eventChannel)
+	}()
 
 	// Create timeout timer in case SSE dont receive notifications or keepalive messages
 	keepAliveTimer := time.NewTimer(l.timeout)
@@ -140,10 +151,10 @@ func (l *Client) Do(params map[string]string, headers map[string]string, callbac
 				continue // don't forward empty/comment events
 			}
 			activeGoroutines.Add(1)
-			go func() {
+			go func(ev RawEvent) {
 				defer activeGoroutines.Done()
-				callback(event)
-			}()
+				callback(ev)
+			}(event)
 		case <-keepAliveTimer.C: // Timeout
 			l.logger.Warning("SSE idle timeout.")
 			l.lifecycle.AbnormalShutdown()
