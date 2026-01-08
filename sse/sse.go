@@ -28,6 +28,7 @@ type Client struct {
 	logger    logging.LoggerInterface
 	bodyMu    sync.Mutex
 	body      io.ReadCloser
+	cancel    context.CancelFunc
 }
 
 // NewClient creates new SSEClient
@@ -91,16 +92,23 @@ func (l *Client) Do(params map[string]string, headers map[string]string, callbac
 		return ErrNotIdle
 	}
 
-	activeGoroutines := sync.WaitGroup{}
+	var activeGoroutines sync.WaitGroup
 
 	ctx, cancel := context.WithCancel(context.Background())
+
+	l.bodyMu.Lock()
+	l.cancel = cancel
+	l.bodyMu.Unlock()
+
 	defer func() {
+		l.logger.Info("SSE streaming exiting")
+
+		cancel()
+
 		l.bodyMu.Lock()
-		l.body = nil
+		l.cancel = nil
 		l.bodyMu.Unlock()
 
-		l.logger.Info("SSE streaming exiting")
-		cancel()
 		activeGoroutines.Wait()
 		l.lifecycle.ShutdownComplete()
 	}()
@@ -110,22 +118,21 @@ func (l *Client) Do(params map[string]string, headers map[string]string, callbac
 		return &ErrConnectionFailed{wrapped: fmt.Errorf("error building request: %w", err)}
 	}
 
-	l.logger.Debug("[GET] ", req.URL.String())
-	l.logger.Debug(fmt.Sprintf("Headers: %v", req.Header))
-
 	resp, err := l.client.Do(req)
 	if err != nil {
-		l.logger.Error("Error performing get: ", req.URL.String(), err.Error())
 		return &ErrConnectionFailed{wrapped: fmt.Errorf("error issuing request: %w", err)}
 	}
+
+	if resp.StatusCode != http.StatusOK {
+		_ = resp.Body.Close()
+		return &ErrConnectionFailed{
+			wrapped: fmt.Errorf("sse request status code: %d", resp.StatusCode),
+		}
+	}
+
 	l.bodyMu.Lock()
 	l.body = resp.Body
 	l.bodyMu.Unlock()
-	if resp.StatusCode != 200 {
-		l.logger.Error(fmt.Sprintf("GET method: Status Code: %d - %s", resp.StatusCode, resp.Status))
-		return &ErrConnectionFailed{wrapped: fmt.Errorf("sse request status code: %d", resp.StatusCode)}
-	}
-	defer resp.Body.Close()
 
 	if !l.lifecycle.InitializationComplete() {
 		return nil
@@ -133,23 +140,24 @@ func (l *Client) Do(params map[string]string, headers map[string]string, callbac
 
 	reader := bufio.NewReader(resp.Body)
 	eventChannel := make(chan RawEvent, 1000)
+
 	activeGoroutines.Add(1)
 	go func() {
 		defer activeGoroutines.Done()
 		l.readEvents(ctx, reader, eventChannel)
 	}()
 
-	// Create timeout timer in case SSE dont receive notifications or keepalive messages
 	keepAliveTimer := time.NewTimer(l.timeout)
 	defer keepAliveTimer.Stop()
 
 	for {
 		select {
 		case <-l.lifecycle.ShutdownRequested():
-			l.logger.Info("Shutting down listener")
 			return nil
+
 		case event, ok := <-eventChannel:
 			keepAliveTimer.Reset(l.timeout)
+
 			if !ok {
 				if l.lifecycle.IsRunning() {
 					return ErrReadingStream
@@ -158,15 +166,16 @@ func (l *Client) Do(params map[string]string, headers map[string]string, callbac
 			}
 
 			if event.IsEmpty() {
-				continue // don't forward empty/comment events
+				continue
 			}
+
 			activeGoroutines.Add(1)
 			go func(ev RawEvent) {
 				defer activeGoroutines.Done()
 				callback(ev)
 			}(event)
-		case <-keepAliveTimer.C: // Timeout
-			l.logger.Warning("SSE idle timeout.")
+
+		case <-keepAliveTimer.C:
 			l.lifecycle.AbnormalShutdown()
 			return ErrTimeout
 		}
@@ -181,6 +190,10 @@ func (l *Client) Shutdown(blocking bool) {
 	}
 
 	l.bodyMu.Lock()
+	if l.cancel != nil {
+		l.cancel()
+		l.cancel = nil
+	}
 	if l.body != nil {
 		_ = l.body.Close()
 		l.body = nil
