@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/splitio/go-toolkit/v5/logging"
+	"github.com/stretchr/testify/require"
 )
 
 func TestSSEErrorConnecting(t *testing.T) {
@@ -278,6 +279,70 @@ func processEventsBug(events []RawEvent, callback func(RawEvent)) {
 	wg.Wait()
 }
 
+func TestShutdownDoesNotHangWhenSSEIsIdle(t *testing.T) {
+	// Fake SSE server: accepts connection, sends headers, then blocks forever
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.WriteHeader(http.StatusOK)
+
+		flusher, ok := w.(http.Flusher)
+		require.True(t, ok)
+		flusher.Flush()
+
+		// Block until client closes the connection
+		<-r.Context().Done()
+	}))
+	defer server.Close()
+
+	logger := logging.NewLogger(nil)
+
+	client, err := NewClient(
+		server.URL,
+		70, // keepAlive
+		0,  // dialTimeout
+		logger,
+	)
+	require.NoError(t, err)
+
+	done := make(chan struct{})
+
+	// Start streaming
+	go func() {
+		_ = client.Do(
+			map[string]string{"channels": "test"},
+			nil,
+			func(e RawEvent) {},
+		)
+		close(done)
+	}()
+
+	// Give the client time to connect and block on read
+	time.Sleep(100 * time.Millisecond)
+
+	shutdownDone := make(chan struct{})
+
+	go func() {
+		client.Shutdown(true)
+		close(shutdownDone)
+	}()
+
+	select {
+	case <-shutdownDone:
+		// OK
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("Shutdown(true) blocked — SSE reader did not exit")
+	}
+
+	// Ensure Do() also returns
+	select {
+	case <-done:
+		// OK
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("Do() did not return after shutdown")
+	}
+}
+
 /*
 func TestCustom(t *testing.T) {
 	url := `https://streaming.split.io/event-stream`
@@ -307,7 +372,8 @@ func TestCustom(t *testing.T) {
 	<-ready
 	fmt.Println(1)
 	go func() {
-		err := client.Do(
+		err := client.Do
+(
 			map[string]string{
 				"accessToken": accessToken,
 				"v":           "1.1",

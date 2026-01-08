@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"sync"
 	"time"
@@ -25,6 +26,8 @@ type Client struct {
 	client    http.Client
 	timeout   time.Duration
 	logger    logging.LoggerInterface
+	bodyMu    sync.Mutex
+	body      io.ReadCloser
 }
 
 // NewClient creates new SSEClient
@@ -92,6 +95,10 @@ func (l *Client) Do(params map[string]string, headers map[string]string, callbac
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer func() {
+		l.bodyMu.Lock()
+		l.body = nil
+		l.bodyMu.Unlock()
+
 		l.logger.Info("SSE streaming exiting")
 		cancel()
 		activeGoroutines.Wait()
@@ -111,6 +118,9 @@ func (l *Client) Do(params map[string]string, headers map[string]string, callbac
 		l.logger.Error("Error performing get: ", req.URL.String(), err.Error())
 		return &ErrConnectionFailed{wrapped: fmt.Errorf("error issuing request: %w", err)}
 	}
+	l.bodyMu.Lock()
+	l.body = resp.Body
+	l.bodyMu.Unlock()
 	if resp.StatusCode != 200 {
 		l.logger.Error(fmt.Sprintf("GET method: Status Code: %d - %s", resp.StatusCode, resp.Status))
 		return &ErrConnectionFailed{wrapped: fmt.Errorf("sse request status code: %d", resp.StatusCode)}
@@ -169,6 +179,13 @@ func (l *Client) Shutdown(blocking bool) {
 		l.logger.Info("SSE client stopped or shutdown in progress. Ignoring.")
 		return
 	}
+
+	l.bodyMu.Lock()
+	if l.body != nil {
+		_ = l.body.Close()
+		l.body = nil
+	}
+	l.bodyMu.Unlock()
 
 	if blocking {
 		l.lifecycle.AwaitShutdownComplete()
