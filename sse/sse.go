@@ -152,6 +152,9 @@ func (l *Client) Do(params map[string]string, headers map[string]string, callbac
 
 	for {
 		select {
+		case <-ctx.Done():
+			return nil
+
 		case <-l.lifecycle.ShutdownRequested():
 			return nil
 
