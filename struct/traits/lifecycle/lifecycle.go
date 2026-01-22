@@ -1,6 +1,7 @@
 package lifecycle
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 )
@@ -62,16 +63,21 @@ func (l *Manager) BeginShutdown() bool {
 
 // ShutdownComplete should be called just before the goroutine exits. (ie: it should be the FIRST deferred func)
 func (l *Manager) ShutdownComplete() {
+	fmt.Println("---Inside ShutdownComplete lifecycle---")
 	// clean up status channel in case a Stop occurred while the task was exiting on its own
 	select {
 	case <-l.shutdown:
+		fmt.Println("---Inside ShutdownComplete lifecycle: case shutdown---")
 	default:
 	}
-
+	fmt.Println("---Inside ShutdownComplete lifecycle before lock---")
 	l.c.L.Lock()
+	fmt.Println("---Inside ShutdownComplete lifecycle StoreInt32---")
 	atomic.StoreInt32(&l.status, StatusIdle)
+	fmt.Println("---Inside ShutdownComplete lifecycle Broadcast---")
 	l.c.Broadcast()
 	l.c.L.Unlock()
+	fmt.Println("---Inside ShutdownComplete lifecycle Unlock---")
 }
 
 // AwaitShutdownComplete can be called in case you need to join against the goroutine's end
