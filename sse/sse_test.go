@@ -59,7 +59,7 @@ func TestSSE(t *testing.T) {
 
 		fmt.Fprintf(w, "data: %s\n\n", `{"id":"YCh53QfLxO:0:0","data":"some","timestamp":1591911770828}`)
 		flusher.Flush()
-		time.Sleep(2 * time.Second)
+		time.Sleep(5 * time.Second)
 	}))
 	defer ts.Close()
 
