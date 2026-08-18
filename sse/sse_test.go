@@ -1,6 +1,7 @@
 package sse
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
@@ -216,6 +217,45 @@ func TestConnectionEOF(t *testing.T) {
 	}
 
 	mockedClient.Shutdown(true)
+}
+
+func TestNewClientDefaultTransport(t *testing.T) {
+	logger := logging.NewLogger(&logging.LoggerOptions{})
+	client, err := NewClient("some-url", 120, 10, logger)
+	if err != nil {
+		t.Fatal("unexpected error: ", err)
+	}
+
+	transport, ok := client.client.Transport.(*http.Transport)
+	if !ok {
+		t.Fatalf("default transport should be *http.Transport, got %T", client.client.Transport)
+	}
+	if transport.Proxy == nil {
+		t.Error("default transport should set Proxy from environment")
+	}
+}
+
+func TestNewClientWithCustomTransport(t *testing.T) {
+	logger := logging.NewLogger(&logging.LoggerOptions{})
+	custom := http.DefaultTransport.(*http.Transport).Clone()
+	custom.ForceAttemptHTTP2 = false
+	custom.TLSNextProto = map[string]func(string, *tls.Conn) http.RoundTripper{}
+
+	client, err := NewClient("some-url", 120, 10, logger, WithCustomTransport(custom))
+	if err != nil {
+		t.Fatal("unexpected error: ", err)
+	}
+
+	if client.client.Transport != custom {
+		t.Error("client should use the transport supplied via WithCustomTransport")
+	}
+	got := client.client.Transport.(*http.Transport)
+	if got.ForceAttemptHTTP2 {
+		t.Error("custom transport should keep ForceAttemptHTTP2 == false")
+	}
+	if got.TLSNextProto == nil {
+		t.Error("custom transport should keep a non-nil TLSNextProto (h2 disabled)")
+	}
 }
 
 /*
