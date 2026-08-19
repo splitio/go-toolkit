@@ -27,8 +27,21 @@ type Client struct {
 	logger    logging.LoggerInterface
 }
 
+// options holds optional configuration for the SSE Client.
+type options struct {
+	transport http.RoundTripper
+}
+
+// Option configures an SSE Client.
+type Option func(*options)
+
+// WithCustomTransport overrides the default transport used by the SSE client.
+func WithCustomTransport(t http.RoundTripper) Option {
+	return func(o *options) { o.transport = t }
+}
+
 // NewClient creates new SSEClient
-func NewClient(url string, keepAlive int, dialTimeout int, logger logging.LoggerInterface) (*Client, error) {
+func NewClient(url string, keepAlive int, dialTimeout int, logger logging.LoggerInterface, opts ...Option) (*Client, error) {
 	if keepAlive < 1 {
 		return nil, errors.New("keepAlive timeout should be higher than 0")
 	}
@@ -36,12 +49,21 @@ func NewClient(url string, keepAlive int, dialTimeout int, logger logging.Logger
 		dialTimeout = 0
 	}
 
-	transport := http.DefaultTransport.(*http.Transport).Clone()
-	transport.Proxy = http.ProxyFromEnvironment
+	var o options
+	for _, apply := range opts {
+		apply(&o)
+	}
+
+	transportToUse := o.transport
+	if transportToUse == nil {
+		t := http.DefaultTransport.(*http.Transport).Clone()
+		t.Proxy = http.ProxyFromEnvironment
+		transportToUse = t
+	}
 
 	client := &Client{
 		url:     url,
-		client:  http.Client{Transport: transport},
+		client:  http.Client{Transport: transportToUse},
 		timeout: time.Duration(keepAlive) * time.Second,
 		logger:  logger,
 	}
