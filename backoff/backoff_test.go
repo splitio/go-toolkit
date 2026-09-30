@@ -32,3 +32,25 @@ func TestBackoff(t *testing.T) {
 		t.Error("It should be 1 second")
 	}
 }
+
+func TestBackoffDoesNotOverflow(t *testing.T) {
+	maxAllowed := 30 * time.Minute
+	b := New(2, maxAllowed)
+	prev := time.Duration(0)
+	for i := 0; i < 10000; i++ {
+		got := b.Next()
+		if got <= 0 {
+			t.Fatalf("attempt %d: wait must be positive, got %v", i, got)
+		}
+		if got > maxAllowed {
+			t.Fatalf("attempt %d: wait must not exceed %v, got %v", i, maxAllowed, got)
+		}
+		if got < prev {
+			t.Fatalf("attempt %d: wait must be non-decreasing, got %v after %v", i, got, prev)
+		}
+		prev = got
+	}
+	if prev != maxAllowed {
+		t.Errorf("wait should settle at the max, got %v", prev)
+	}
+}
