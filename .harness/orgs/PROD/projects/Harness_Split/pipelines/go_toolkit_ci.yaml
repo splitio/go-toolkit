@@ -60,10 +60,12 @@ pipeline:
                     image: golang:1.18
                     shell: Bash
                     command: |-
-                      apt-get update -qq && apt-get install -y -qq --no-install-recommends unzip
+                      # unzip's package is gone from the bullseye-security mirror (same 404
+                      # as redis-server above); use python3's zipfile module instead, which
+                      # golang:1.18 already ships, so we don't depend on apt here at all.
                       export SONAR_SCANNER_VERSION=6.2.1.4610
                       curl -sSLo sonar-scanner.zip "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux-x64.zip"
-                      unzip -q sonar-scanner.zip
+                      python3 -m zipfile -e sonar-scanner.zip .
                       export PATH="$(pwd)/sonar-scanner-${SONAR_SCANNER_VERSION}-linux-x64/bin:$PATH"
 
                       SONAR_EXTRA_ARGS=""
