@@ -60,15 +60,11 @@ pipeline:
                     image: golang:1.18
                     shell: Bash
                     command: |-
-                      # unzip's package is gone from the bullseye-security mirror (same 404
-                      # as redis-server above); use python3's zipfile module instead, which
-                      # golang:1.18 already ships, so we don't depend on apt here at all.
+                      # unzip 404s on the bullseye-security mirror; use python's zipfile (already in the image).
                       export SONAR_SCANNER_VERSION=6.2.1.4610
                       curl -sSLo sonar-scanner.zip "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux-x64.zip"
                       python3 -m zipfile -e sonar-scanner.zip .
-                      # python's zipfile drops unix permission bits, so restore them on every bin/ dir
-                      # and on jspawnhelper, both in the bundled JRE (jre/bin/java, jre/lib/jspawnhelper);
-                      # otherwise sonar-scanner can't find or spawn java.
+                      # zipfile drops unix perms; restore them for the scanner and its bundled JRE (bin/*, lib/jspawnhelper).
                       find "sonar-scanner-${SONAR_SCANNER_VERSION}-linux-x64" -type f \( -path '*/bin/*' -o -name jspawnhelper \) -exec chmod +x {} +
                       export PATH="$(pwd)/sonar-scanner-${SONAR_SCANNER_VERSION}-linux-x64/bin:$PATH"
 
@@ -81,6 +77,7 @@ pipeline:
                         SONAR_EXTRA_ARGS="-Dsonar.branch.name=<+codebase.branch>"
                       fi
 
+                      # skipJreProvisioning: the server-provisioned JRE is extracted non-executable (error=13); use the bundled one.
                       sonar-scanner \
                         -Dsonar.host.url="https://sonar.harness.io/" \
                         -Dsonar.scanner.skipJreProvisioning=true \
