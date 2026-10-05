@@ -40,8 +40,10 @@ pipeline:
                     # Tests connect to localhost:6379. Harness Cloud Background steps run
                     # in a separate container (not localhost). Run redis-server inside this
                     # container so tests share the real localhost — matches GHA `services:`.
+                    # Pinned to the bullseye/main (non-security) build: bullseye-security has
+                    # dropped 6.0.16-1+deb11u9 from its mirror, causing 404s on golang:1.18.
                     command: |-
-                      apt-get update -qq && apt-get install -y -qq --no-install-recommends redis-server
+                      apt-get update -qq && apt-get install -y -qq --no-install-recommends redis-server=5:6.0.16-1+deb11u2 redis-tools=5:6.0.16-1+deb11u2
                       redis-server --daemonize yes
                       for i in $(seq 1 30); do
                         redis-cli ping 2>/dev/null | grep -q PONG && { echo "Redis is up"; break; }
