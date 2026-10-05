@@ -66,9 +66,10 @@ pipeline:
                       export SONAR_SCANNER_VERSION=6.2.1.4610
                       curl -sSLo sonar-scanner.zip "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux-x64.zip"
                       python3 -m zipfile -e sonar-scanner.zip .
-                      # python's zipfile drops unix permission bits, so restore them on every bin/ dir,
-                      # including the bundled JRE (jre/bin/java); otherwise sonar-scanner can't find java.
-                      find "sonar-scanner-${SONAR_SCANNER_VERSION}-linux-x64" -type f -path '*/bin/*' -exec chmod +x {} +
+                      # python's zipfile drops unix permission bits, so restore them on every bin/ dir
+                      # and on jspawnhelper, both in the bundled JRE (jre/bin/java, jre/lib/jspawnhelper);
+                      # otherwise sonar-scanner can't find or spawn java.
+                      find "sonar-scanner-${SONAR_SCANNER_VERSION}-linux-x64" -type f \( -path '*/bin/*' -o -name jspawnhelper \) -exec chmod +x {} +
                       export PATH="$(pwd)/sonar-scanner-${SONAR_SCANNER_VERSION}-linux-x64/bin:$PATH"
 
                       SONAR_EXTRA_ARGS=""
@@ -82,6 +83,7 @@ pipeline:
 
                       sonar-scanner \
                         -Dsonar.host.url="https://sonar.harness.io/" \
+                        -Dsonar.scanner.skipJreProvisioning=true \
                         -Dsonar.token="${SONAR_TOKEN}" \
                         -Dsonar.projectName=go-toolkit \
                         -Dsonar.projectKey=go-toolkit \
