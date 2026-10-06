@@ -40,8 +40,10 @@ pipeline:
                     # Tests connect to localhost:6379. Harness Cloud Background steps run
                     # in a separate container (not localhost). Run redis-server inside this
                     # container so tests share the real localhost — matches GHA `services:`.
+                    # Pinned to the bullseye/main (non-security) build: bullseye-security has
+                    # dropped 6.0.16-1+deb11u9 from its mirror, causing 404s on golang:1.18.
                     command: |-
-                      apt-get update -qq && apt-get install -y -qq --no-install-recommends redis-server
+                      apt-get update -qq && apt-get install -y -qq --no-install-recommends redis-server=5:6.0.16-1+deb11u2 redis-tools=5:6.0.16-1+deb11u2
                       redis-server --daemonize yes
                       for i in $(seq 1 30); do
                         redis-cli ping 2>/dev/null | grep -q PONG && { echo "Redis is up"; break; }
@@ -58,10 +60,12 @@ pipeline:
                     image: golang:1.18
                     shell: Bash
                     command: |-
-                      apt-get update -qq && apt-get install -y -qq --no-install-recommends unzip
+                      # unzip 404s on the bullseye-security mirror; use python's zipfile (already in the image).
                       export SONAR_SCANNER_VERSION=6.2.1.4610
                       curl -sSLo sonar-scanner.zip "https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_SCANNER_VERSION}-linux-x64.zip"
-                      unzip -q sonar-scanner.zip
+                      python3 -m zipfile -e sonar-scanner.zip .
+                      # zipfile drops unix perms; restore them for the scanner and its bundled JRE (bin/*, lib/jspawnhelper).
+                      find "sonar-scanner-${SONAR_SCANNER_VERSION}-linux-x64" -type f \( -path '*/bin/*' -o -name jspawnhelper \) -exec chmod +x {} +
                       export PATH="$(pwd)/sonar-scanner-${SONAR_SCANNER_VERSION}-linux-x64/bin:$PATH"
 
                       SONAR_EXTRA_ARGS=""
@@ -73,8 +77,10 @@ pipeline:
                         SONAR_EXTRA_ARGS="-Dsonar.branch.name=<+codebase.branch>"
                       fi
 
+                      # skipJreProvisioning: the server-provisioned JRE is extracted non-executable (error=13); use the bundled one.
                       sonar-scanner \
                         -Dsonar.host.url="https://sonar.harness.io/" \
+                        -Dsonar.scanner.skipJreProvisioning=true \
                         -Dsonar.token="${SONAR_TOKEN}" \
                         -Dsonar.projectName=go-toolkit \
                         -Dsonar.projectKey=go-toolkit \
