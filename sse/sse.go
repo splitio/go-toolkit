@@ -25,11 +25,14 @@ type Client struct {
 	client    http.Client
 	timeout   time.Duration
 	logger    logging.LoggerInterface
+
+	onConnected func()
 }
 
 // options holds optional configuration for the SSE Client.
 type options struct {
-	transport http.RoundTripper
+	transport   http.RoundTripper
+	onConnected func()
 }
 
 // Option configures an SSE Client.
@@ -38,6 +41,14 @@ type Option func(*options)
 // WithCustomTransport overrides the default transport used by the SSE client.
 func WithCustomTransport(t http.RoundTripper) Option {
 	return func(o *options) { o.transport = t }
+}
+
+// WithOnConnected registers a callback invoked each time a streaming connection is established,
+// i.e. once the server has answered 200 and before any event is read. It runs synchronously on
+// the goroutine executing Do, so it must not block. It is not invoked if the connection fails or
+// the client is shut down while connecting.
+func WithOnConnected(fn func()) Option {
+	return func(o *options) { o.onConnected = fn }
 }
 
 // NewClient creates new SSEClient
@@ -66,6 +77,8 @@ func NewClient(url string, keepAlive int, dialTimeout int, logger logging.Logger
 		client:  http.Client{Transport: transportToUse},
 		timeout: time.Duration(keepAlive) * time.Second,
 		logger:  logger,
+
+		onConnected: o.onConnected,
 	}
 	client.lifecycle.Setup()
 	return client, nil
@@ -134,6 +147,10 @@ func (l *Client) Do(params map[string]string, headers map[string]string, callbac
 
 	if !l.lifecycle.InitializationComplete() {
 		return nil
+	}
+
+	if l.onConnected != nil {
+		l.onConnected()
 	}
 
 	reader := bufio.NewReader(resp.Body)
