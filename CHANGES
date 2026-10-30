@@ -1,3 +1,6 @@
+5.6.0 (Oct 30, 2026)
+- Added `WithOnConnected` option to the SSE client to register a callback invoked each time a streaming connection is established.
+
 5.5.1 (Oct 5, 2026)
 - Fixed duration overflow in `backoff` that turned long backoffs into zero or negative waits.
 

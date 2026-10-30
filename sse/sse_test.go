@@ -308,3 +308,66 @@ func TestCustom(t *testing.T) {
 
 }
 */
+
+func TestOnConnectedFiresBeforeFirstEvent(t *testing.T) {
+	logger := logging.NewLogger(&logging.LoggerOptions{})
+
+	release := make(chan struct{})
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		<-release // no event is sent until the test has seen the connection callback
+		fmt.Fprint(w, "event: message\ndata: hello\n\n")
+		w.(http.Flusher).Flush()
+	}))
+	defer ts.Close()
+	defer close(release)
+
+	connected := make(chan struct{}, 2)
+	client, _ := NewClient(ts.URL, 120, 10, logger, WithOnConnected(func() { connected <- struct{}{} }))
+
+	events := make(chan RawEvent, 1)
+	done := make(chan error, 1)
+	go func() { done <- client.Do(map[string]string{}, map[string]string{}, func(e RawEvent) { events <- e }) }()
+
+	select {
+	case <-connected:
+	case <-time.After(2 * time.Second):
+		t.Fatal("onConnected should fire once the stream is open, without waiting for an event")
+	}
+	select {
+	case <-events:
+		t.Error("no event should have been delivered before the connection callback")
+	default:
+	}
+
+	release <- struct{}{}
+	select {
+	case <-events:
+	case <-time.After(2 * time.Second):
+		t.Fatal("event should be delivered after connecting")
+	}
+	if len(connected) != 0 {
+		t.Error("onConnected should fire once per connection")
+	}
+
+	client.Shutdown(true)
+	<-done
+}
+
+func TestOnConnectedNotFiredOnFailedConnection(t *testing.T) {
+	logger := logging.NewLogger(&logging.LoggerOptions{})
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+	}))
+	defer ts.Close()
+
+	client, _ := NewClient(ts.URL, 120, 10, logger, WithOnConnected(func() { t.Error("onConnected should not fire on a failed connection") }))
+	err := client.Do(map[string]string{}, map[string]string{}, func(e RawEvent) { t.Error("no events expected") })
+	asErrConnecting := &ErrConnectionFailed{}
+	if !errors.As(err, &asErrConnecting) {
+		t.Errorf("Unexpected type of error: %+v", err)
+	}
+}
